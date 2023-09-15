@@ -3,9 +3,13 @@ An app to control ErgoQuest's zero-gravity chairs.
 
 ## Team Members
 Henry Goldkuhle
+
 Brian Hlathein
+
 Prince Padi
+
 Jacob Vanden Bosch
+
 Joshua Wilson
 
 ## About ErgoQuest
