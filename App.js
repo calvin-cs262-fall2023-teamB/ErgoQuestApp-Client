@@ -1,43 +1,135 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import Modal from 'react-native-modal';
 
-const Logo = require('./assets/StolenLogo_ErgoQuest.png');
+const { width, height } = Dimensions.get('window');
 
-export default function App() {
+const MoveScreen = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Move Page</Text>
+  </View>
+);
+
+const PresetsScreen = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Presets Page</Text>
+  </View>
+);
+
+const TimedScreen = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Timed Page</Text>
+  </View>
+);
+
+const Tab = createMaterialTopTabNavigator();
+const Stack = createNativeStackNavigator();
+
+function HomeScreen({ navigation }) {
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isHelpVisible, setIsHelpVisible] = useState(false);
+
+  const toggleSettingsVisible = () => {
+    setIsSettingsVisible(!isSettingsVisible);
+  };
+  const toggleHelpVisible = () => {
+    setIsHelpVisible(!isHelpVisible);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <Image source={Logo} style={styles.image} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, marginTop: -15 }}>
+        <TouchableOpacity onPress={toggleHelpVisible}>
+          <Ionicons name="ios-help-circle" size={36} color="black" />
+        </TouchableOpacity>
+        <Image source={require('./assets/StolenLogo_ErgoQuest.png')} />
+        <TouchableOpacity onPress={toggleSettingsVisible}>
+          <Ionicons name="ios-cog" size={36} color="black" />
+        </TouchableOpacity>
       </View>
-      <View style={styles.textContainer}>
-        <Text>The ErgoQuest control app</Text>
-        <Text>(This might become the launch loading screen)</Text>
-        <Text style={[{ fontStyle: 'italic' }]}>Version: 0.0</Text>
+      <Tab.Navigator tabBarPosition="bottom">
+        <Tab.Screen
+          name="Move"
+          component={MoveScreen}
+          options={{
+            tabBarLabel: 'Move',
+            tabBarIcon: () => <Ionicons name="ios-move" size={24} color="black" />,
+          }}
+        />
+        <Tab.Screen
+          name="Presets"
+          component={PresetsScreen}
+          options={{
+            tabBarLabel: 'Presets',
+            tabBarIcon: () => <Ionicons name="ios-create" size={24} color="black" />,
+          }}
+        />
+        <Tab.Screen
+          name="Timed"
+          component={TimedScreen}
+          options={{
+            tabBarLabel: 'Timed',
+            tabBarIcon: () => <Ionicons name="ios-time" size={24} color="black" />,
+          }}
+        />
+      </Tab.Navigator>
+      <SettingsModal isVisible={isSettingsVisible} onClose={toggleSettingsVisible} />
+      <HelpModal isVisible={isHelpVisible} onClose={toggleHelpVisible} />
+    </SafeAreaView>
+  );
+}
+
+function SettingsModal({ isVisible, onClose }) {
+  return (
+    <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
+      <View style={styles.modalContainer}>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Ionicons name="ios-close-circle" size={36} color="black" />
+        </TouchableOpacity>
+        <Text>Settings Page</Text>
       </View>
-      <StatusBar style="auto" />
-    </View>
+    </Modal>
+  );
+}
+
+function HelpModal({ isVisible, onClose }) {
+  return (
+    <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
+      <View style={styles.modalContainer}>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Ionicons name="ios-close-circle" size={36} color="black" />
+        </TouchableOpacity>
+        <Text>Help Page</Text>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  modalContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  imageContainer: {
-    flex: 1,
-    paddingTop: 10,
-  },
-  image: {
-    width: 320,
-    height: undefined,
-    aspectRatio: 1,
-    resizeMode: 'contain',
-  },
-  textContainer: {
-    flex: 1 / 2,
-    alignItems: 'center',
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
   },
 });
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Home" component={HomeScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
