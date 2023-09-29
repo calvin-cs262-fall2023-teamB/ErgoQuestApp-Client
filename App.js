@@ -5,6 +5,10 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
+import DeviceModal from "./DeviceConnectionModal";
+import { PulseIndicator } from "./PulseIndicator";
+import useBLE from "./useBLE";
+import BLEConnection from './BLEConnection'; // Import the BLEConnection component
 
 const { width, height } = Dimensions.get('window');
 
@@ -91,6 +95,8 @@ function SettingsModal({ isVisible, onClose }) {
           <Ionicons name="ios-close-circle" size={36} color="black" />
         </TouchableOpacity>
         <Text>Settings Page</Text>
+        {/* Add the BLEConnection component to the settings modal */}
+        <BLEConnection />
       </View>
     </Modal>
   );
