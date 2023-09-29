@@ -12,9 +12,16 @@ export default function HelpModal({ isVisible, onClose }) {
       <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
         <View style={globalStyles.modalContainer}>
           <TouchableOpacity onPress={onClose} style={globalStyles.closeButton}>
-            <Ionicons name="ios-close-circle" size={36} color="black" />
+            <Ionicons name="ios-close-circle" size={36} color="Black" />
           </TouchableOpacity>
           <Text>Help Page</Text>
+          <Text>The Move page allows you to move your
+          chair without permanently saving the setting</Text>
+        <Text>The Presets page allows you to save and 
+          access multiple positions whic can be easily 
+          switched between</Text>
+          <Text>The Timed page allows you to set times in which 
+            presets are switched to on a timed schedule</Text>
         </View>
       </Modal>
     );
