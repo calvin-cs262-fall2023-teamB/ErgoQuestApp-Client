@@ -5,30 +5,21 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
+// style imports
+import { globalStyles } from './styles/global';
+// Screen imports
+import MoveScreen from './screens/Move';
+import PresetsScreen from './screens/Presets';
+import TimedScreen from './screens/Timed';
+import SettingsModal from './screens/Settings';
+import HelpModal from './screens/HelpModal';
 
 const { width, height } = Dimensions.get('window');
-
-const MoveScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Move Page</Text>
-  </View>
-);
-
-const PresetsScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Presets Page</Text>
-  </View>
-);
-
-const TimedScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Timed Page</Text>
-  </View>
-);
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
 
+// HomeScreen to remain in App.js
 function HomeScreen({ navigation }) {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isHelpVisible, setIsHelpVisible] = useState(false);
@@ -82,47 +73,6 @@ function HomeScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-function SettingsModal({ isVisible, onClose }) {
-  return (
-    <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
-      <View style={styles.modalContainer}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="ios-close-circle" size={36} color="black" />
-        </TouchableOpacity>
-        <Text>Settings Page</Text>
-      </View>
-    </Modal>
-  );
-}
-
-function HelpModal({ isVisible, onClose }) {
-  return (
-    <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
-      <View style={styles.modalContainer}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="ios-close-circle" size={36} color="black" />
-        </TouchableOpacity>
-        <Text>Help Page</Text>
-      </View>
-    </Modal>
-  );
-}
-
-const styles = StyleSheet.create({
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-});
 
 export default function App() {
   return (
