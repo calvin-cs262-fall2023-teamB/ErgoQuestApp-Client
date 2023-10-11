@@ -35,7 +35,7 @@ function HomeScreen({ navigation }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, marginTop: -15 }}>
         <TouchableOpacity onPress={toggleHelpVisible}>
-          <Ionicons name="ios-help-circle" size={36} color="#43B2D1" />
+          <Ionicons name="ios-help-circle" size={36} color="black" />
         </TouchableOpacity>
         <Image source={require('./assets/StolenLogo_ErgoQuest.png')} />
         <TouchableOpacity onPress={toggleSettingsVisible}>

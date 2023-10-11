@@ -1,4 +1,3 @@
-// BLEScanner.js
 import React, { useEffect, useReducer, useRef } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
@@ -41,7 +40,7 @@ const reducer = (state, action) => {
 
 const manager = new BleManager();
 
-export default function BLEScanner() {
+export default function BLEScanner({onClose}) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const stopBLEScan = () => {
@@ -63,25 +62,30 @@ export default function BLEScanner() {
     });
   };
 
+  // Cleanup function to clear the list when the component is unmounted
+  useEffect(() => {
+    return () => {
+      stopBLEScan();
+      dispatch({ type: 'reset' }); // Clear the list of devices
+    };
+  }, [onClose]);
+
   useEffect(() => {
     if (state.bleReady && !state.isScanning && !state.scanDone) {
       scanAndConnect();
     }
 
-    if (state.scanTimeout <= 0 && state.isScanning && !state.scanDone) {
-      dispatch({ type: 'stopScan' });
+    if (!timerRef.current && state.isScanning && !state.scanDone) {
+      // Start a timer to stop scanning after 2 seconds
+      timerRef.current = setTimeout(() => {
+        stopBLEScan();
+      }, 500);
+    } else if (!state.isScanning && state.scanDone) {
+      // Clear the timer when scanning is stopped or done
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
   }, [state]);
-
-  useEffect(() => {
-    timerRef.current = setTimeout(() => {
-      stopBLEScan();
-    }, 1000 * 10);
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     const subscription = manager.onStateChange((state) => {
@@ -93,13 +97,17 @@ export default function BLEScanner() {
     return () => subscription.remove();
   }, [manager]);
 
-  const renderItem = ({ item }) => {
-    return (
-      <View>
-        <Text>{item.name || 'No name found'}</Text>
-        <Text>{item.id}</Text>
-      </View>
-    );
+  const renderItem = ({ item, index }) => {
+    // Limit the rendering to the first 10 items
+    if (index < 10) {
+      return (
+        <View>
+          <Text>{item.name || 'No name found'}</Text>
+          <Text>{item.id}</Text>
+        </View>
+      );
+    }
+    return null; // Return null for items beyond the first 10
   };
 
   return (
@@ -110,7 +118,8 @@ export default function BLEScanner() {
         onRefresh={() => dispatch({ type: 'reset' })}
         renderItem={renderItem}
         data={state.items}
+        keyExtractor={(item) => item.id}
       />
     </View>
   );
-}
+  }
