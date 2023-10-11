@@ -3,11 +3,12 @@ import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleShe
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { globalStyles } from '../styles/global';
-import BLEScanner from './BLEScanner';
-import * as Location from 'expo-location';
+//import BLEScanner from './BLEScanner';
+//import * as Location from 'expo-location';
 
 export default function SettingsModal({ isVisible, onClose }) {
   // State to track whether Bluetooth permissions have been requested
+  /*
   const [bluetoothPermissionRequested, setBluetoothPermissionRequested] = useState(false);
 
   // Function to request Bluetooth and Location permissions
@@ -32,6 +33,7 @@ export default function SettingsModal({ isVisible, onClose }) {
       setBluetoothPermissionRequested(true); // Set the flag to true to prevent re-requesting
     }
   }, []);
+  */
 
   return (
     <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
@@ -40,7 +42,6 @@ export default function SettingsModal({ isVisible, onClose }) {
           <Ionicons name="ios-close-circle" size={36} color="black" />
         </TouchableOpacity>
         <Text>Settings Page</Text>
-        <BLEScanner />
       </View>
     </Modal>
   );

@@ -15,7 +15,6 @@ export default function HelpModal({ isVisible, onClose }) {
             <Ionicons name="ios-close-circle" size={36} color="black" />
           </TouchableOpacity>
           <Text>Help Page</Text>
-<<<<<<< HEAD
           <Text>The Move page allows you to move your
           chair without permanently saving the setting</Text>
           <Text>The Presets page allows you to save and 
@@ -23,8 +22,6 @@ export default function HelpModal({ isVisible, onClose }) {
           switched between</Text>
           <Text>The Timed page allows you to set times in which 
             presets are switched to on a timed schedule</Text>
-=======
->>>>>>> parent of 1c41acc (Merge pull request #4 from calvin-cs262-fall2023-teamB/Info-Button)
         </View>
       </Modal>
     );
