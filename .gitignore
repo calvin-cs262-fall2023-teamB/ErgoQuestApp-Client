@@ -28,6 +28,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# ios folder used with Xcode
+ios/
+
 # local env files
 .env*.local
 
