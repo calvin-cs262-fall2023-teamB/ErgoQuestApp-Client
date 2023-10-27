@@ -1,54 +1,159 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
+import { NavigationContainer, TabActions, TabRouter, NavigationAction, DefaultNavigatorOptions } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { globalStyles } from '../styles/global';
+import { TextInput } from 'react-native-gesture-handler';
+import Dialog from "react-native-dialog";
 
-export default function PresetsScreen() {
+export default function PresetsScreen( { navigation } ) {
+    // hooks
+    const [renameVisible, setRenameVisible] = useState(false);
+    const [createVisible, setCreateVisible] = useState(false);
+    const [deleteVisible, setDeleteVisible] = useState(false);
+    const [createOptionsVisible, setCreateOptionsVisible] = useState(false);
+    const [selectedID, setSelectedID] = useState(-1);
+
     // functions
     const onPressFunction = () => {
         console.log('Create Preset Button Tapped');
+        setCreateVisible(createVisible?false:true);
     };
 
     const onLongPressFunction = () => {
         console.log('Create Preset Button Held');
+        setCreateOptionsVisible(createOptionsVisible?false:true);
     };
 
     const activate = (id) => {
         console.log('Activate ID: ', id);
     };
 
-    const options = (id) => {
-        console.log('Options for ID: ', id);
+    const startRename = (id) => {
+        console.log('Rename Preset with ID =', id);
+        setSelectedID(id);
+        setRenameVisible(renameVisible?false:true);
+    }
+
+    const startDelete = (id) => {
+        console.log('Delete Preset with ID =', id);
+        setSelectedID(id);
+        setDeleteVisible(deleteVisible?false:true);
     };
 
-    /* Hardcode a "database"/list of movies. */
-    const [presets] = useState([
-        { name: "Preset 1", id: '1',
+    const handleCancel = () => {
+        console.log("Close Dialogs");
+        tempName = "";
+        setRenameVisible(false);
+        setCreateVisible(false);
+        setDeleteVisible(false);
+        setCreateOptionsVisible(false);
+    };
+  
+    const renamePreset = () => {
+        if (selectedID === undefined) {
+            console.log("ID is undefined.", selectedID);
+            setRenameVisible(false);
+        } else {
+            console.log("Rename preset to: " + tempName);
+            let newPresets = [];
+            for (let i = 0; i < presets.length; i++){
+                if (presets[i].id === selectedID) {
+                    if (tempName === undefined || tempName === ""){
+                        tempName = "Preset " + presets[i].id;
+                    }
+                    newPresets.push({id: presets[i].id, name: tempName, actuatorValues: presets[i].actuatorValues})
+                } else {
+                    newPresets.push(presets[i]);
+                }
+            }
+            setPresets(newPresets);
+            tempName = undefined;
+            setSelectedID(undefined);
+            setRenameVisible(false);
+        }
+    };
+
+    const createPreset = () => {
+        let largestIndex = 0;
+        for (let i = 0; i < presets.length; i++) {
+            if (presets[i].id > largestIndex) {
+                largestIndex = presets[i].id;
+            }
+        }
+        const newID = largestIndex + 1;
+        if (tempName === "" || tempName == undefined){
+            tempName = "Preset " + newID + "";
+        }
+        console.log("Create preset: " + tempName);
+        let newPresets = [];
+        for (let i = 0; i < presets.length; i++){
+            newPresets.push(presets[i]);
+        }
+        newPresets.push({
+            name: tempName,
+            id: newID,
+            actuatorValues: "?",
+        });
+        setPresets(newPresets);
+        tempName = undefined;
+        setCreateVisible(false);
+        setCreateOptionsVisible(false); // just in case
+    };
+
+    const deletePreset = () => {
+        if (selectedID === undefined) {
+            console.log("ID is undefined.", selectedID);
+            setDeleteVisible(false);
+        } else {
+            let newPresets = [];
+            for (let i = 0; i < presets.length; i++){
+                if (presets[i].id !== selectedID) {
+                    newPresets.push(presets[i]);
+                }
+            }
+            setPresets(newPresets);
+            setSelectedID(undefined);
+            setDeleteVisible(false);
+        }
+    };
+
+    const goToMove = () => {
+        console.log("attempting tab switch");
+        setCreateOptionsVisible(false);
+        navigation.navigate('Move');
+
+    };
+
+    /* Hardcode some values */
+    const [presets, setPresets] = useState([
+        { name: "Preset 1", id: 1,
             actuatorValues: "Need values and how they will be stored"},
-        { name: "Preset 2", id: '2',
+        { name: "Preset 2", id: 2,
             actuatorValues: "same as above"},
         ]);
+    // Variables
+    let tempName;
 
     // display
     return(
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-
             {/* Presets listed */}
-            <FlatList style={ styles.pageArea } data={presets} renderItem={({ item })=> (
+            <FlatList scrollEnabled={true} style={ styles.pageArea } data={presets} renderItem={({ item })=> (
                 <View style={[ styles.preset ]}>
                     <Pressable 
                         onPress={() => activate( item.id )}
-                        onLongPress={() => options( item.id )}
+                        onLongPress={() => startRename( item.id )}
                         style={[ styles.presetButton, styles.presetButtonLeft ]}
                         >
                         <Text style={[ styles.presetButtonText ] } >{ item.name }</Text>
                     </Pressable>
                     <Pressable 
-                        onPress={() => options( item.id )}
+                        onPress={() => startRename( item.id )}
+                        onLongPress={() => startDelete( item.id )}
                         style={[ styles.presetButton, styles.presetButtonRight ]}
                         >
                         <Text style={[ styles.presetButtonText ] } > ••• </Text>
@@ -71,7 +176,52 @@ export default function PresetsScreen() {
                     )}
                 </Pressable>
             </View>
-
+            {/* Dialogs */}
+            <View style={globalStyles.container}>
+                {/* RENAME */}
+                <Dialog.Container visible={renameVisible}>
+                    <Dialog.Title>Rename Preset?</Dialog.Title>
+                    <Dialog.Description>
+                        Please enter a new name for your preset.
+                    </Dialog.Description>
+                    <Dialog.Input onChangeText={(text) => (tempName = text) } />
+                    <Dialog.Button label="Cancel" onPress={handleCancel} />
+                    <Dialog.Button label="Confirm" onPress={renamePreset} />
+                </Dialog.Container>
+                {/* CREATE PRESET */}
+                <Dialog.Container visible={createVisible}>
+                    <Dialog.Title>Create Preset?</Dialog.Title>
+                    <Dialog.Description>
+                        Enter a name for the preset to save the current actuator values.
+                    </Dialog.Description>
+                    <Dialog.Input onChangeText={(text) => (tempName = text) } />
+                    <Dialog.Button label="Cancel" onPress={handleCancel} />
+                    <Dialog.Button label="Create" onPress={createPreset} />
+                </Dialog.Container>
+                {/* DELETE PRESET */}
+                <Dialog.Container visible={deleteVisible}>
+                    <Dialog.Title>Delete Preset?</Dialog.Title>
+                    <Dialog.Description>
+                        Are you sure you want to delete this preset? This action is permanent.
+                    </Dialog.Description>
+                    <Dialog.Button label="Cancel" onPress={handleCancel} />
+                    <Dialog.Button label="DELETE" onPress={deletePreset} style={{color: '#f00'}} />
+                </Dialog.Container>
+                {/* CREATE OPTIONS */}
+                <Dialog.Container visible={createOptionsVisible} verticalButtons={true}>
+                    <Dialog.Title>Create Preset:</Dialog.Title>
+                    <Dialog.Description>
+                        Save current actuator values as a new preset?
+                    </Dialog.Description>
+                    <Dialog.Description>
+                        Preset name (optional):
+                    </Dialog.Description>
+                    <Dialog.Input onChangeText={(text) => (tempName = text) } />
+                    <Dialog.Button label="Create New Preset" onPress={createPreset} />
+                    <Dialog.Button label="Adjust Actuator Values" onPress={goToMove} />
+                    <Dialog.Button label="Cancel" onPress={handleCancel} />
+                </Dialog.Container>
+            </View>         
         </View>
     );
 }
@@ -90,7 +240,7 @@ const styles = StyleSheet.create({
     },
     preset: {
         width: "98%",
-        height: "90%",
+        height: 75,
         marginBottom: "1%",
         marginLeft: "1%",
         marginRight: "1%",
@@ -100,6 +250,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "flex-start",
         backgroundColor: "#88ccff",
+        scrollEnabled: true,
     },
     presetButton: {
         flex: 1,
@@ -116,7 +267,7 @@ const styles = StyleSheet.create({
     presetButtonText: {
         textAlign: "center",
         justifyContent: "center",
-        fontSize: "24",
+        fontSize: 24,
         padding: "2%",
     },
     pageBottom: {
@@ -130,7 +281,7 @@ const styles = StyleSheet.create({
         alignContent: "center",
         textAlign: "center",
         justifyContent: "center",
-        fontSize: "24",
+        fontSize: 24,
         padding: "5%",
         width: "100%",
         height: "100%",
