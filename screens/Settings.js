@@ -3,6 +3,8 @@ import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleShe
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { globalStyles } from '../styles/global';
+import { useNavigation } from '@react-navigation/native';
+
 //import BLEScanner from './BLEScanner';
 //import * as Location from 'expo-location';
 
@@ -35,14 +37,36 @@ export default function SettingsModal({ isVisible, onClose }) {
   }, []);
   */
 
-  return (
-    <Modal isVisible={isVisible} onBackdropPress={onClose} backdropOpacity={0.5}>
-      <View style={globalStyles.modalContainer}>
-        <TouchableOpacity onPress={onClose} style={globalStyles.closeButton}>
-          <Ionicons name="ios-close-circle" size={36} color="black" />
-        </TouchableOpacity>
-        <Text>Settings Page</Text>
-      </View>
-    </Modal>
-  );
-}
+  const navigation = useNavigation(); // Get the navigation object
+  
+    const handleRemovePage = () => {
+      navigation.pop(); // This will remove the "Settings Page" from the stack.
+    };
+  
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, marginTop: 20 }}>
+          <View style={{ position: 'absolute', top: -10, right: 20 }}>
+            <TouchableOpacity onPress={handleRemovePage}>
+              <View style={{ backgroundColor: 'red', borderRadius: 20, padding: 10 }}>
+                <Ionicons name="ios-close" size={30} color="white" />
+              </View>
+            </TouchableOpacity>
+          </View>
+          <View style={{ position: 'absolute', top: 0, left: 120 }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Settings Page</Text>
+          </View>
+        </View>
+        <View style={{ position: 'absolute', top: 200, left: 55 }}>
+            <TouchableOpacity onPress={() => alert("Bluetooth button pressed")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+              <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Connect Bluetooth Chair</Text>
+            </TouchableOpacity>
+            </View>
+        <View style={{ position: 'absolute', top: 300, left: 150 }}>
+            <TouchableOpacity onPress={() => alert("Account Information")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+              <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Account</Text>
+            </TouchableOpacity>
+            </View>
+      </SafeAreaView>
+    );
+  }
