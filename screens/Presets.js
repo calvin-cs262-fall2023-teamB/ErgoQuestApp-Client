@@ -17,6 +17,17 @@ export default function PresetsScreen( { navigation } ) {
     const [createOptionsVisible, setCreateOptionsVisible] = useState(false);
     const [selectedID, setSelectedID] = useState(-1);
 
+    /* Presets and values */
+    const [presets, setPresets] = useState([
+        { name: "Preset 1", id: 1,
+            actuatorValues: [{id: 0, position: 0}, {id: 1, position: 100}]},
+        { name: "Preset 2", id: 2,
+            actuatorValues: [{id: 0, position: 50}, {id: 1, position: 50}]},
+        ]);
+
+    // Extra Variables
+    let tempName;
+
     // functions
     const onPressFunction = () => {
         console.log('Create Preset Button Tapped');
@@ -30,6 +41,14 @@ export default function PresetsScreen( { navigation } ) {
 
     const activate = (id) => {
         console.log('Activate ID: ', id);
+        for (let i = 0; i < presets.length; i++){
+            if (presets[i].id === id){
+                console.log("Set actuator values to: ");
+                console.log(presets[i].actuatorValues);
+                return;
+            }
+        }
+        console.log("ERROR, ID not found in preset array");
     };
 
     const startRename = (id) => {
@@ -93,11 +112,13 @@ export default function PresetsScreen( { navigation } ) {
         for (let i = 0; i < presets.length; i++){
             newPresets.push(presets[i]);
         }
+        // TODO: get actuatorValues from move screen
         newPresets.push({
             name: tempName,
             id: newID,
-            actuatorValues: "?",
+            actuatorValues: [{id: 0, position: 50}],
         });
+        newPresets[newPresets.length - 1].actuatorValues.push({id: 1, position: 25}); // 2 ways of saving presets available
         setPresets(newPresets);
         tempName = undefined;
         setCreateVisible(false);
@@ -128,19 +149,9 @@ export default function PresetsScreen( { navigation } ) {
 
     };
 
-    /* Hardcode some values */
-    const [presets, setPresets] = useState([
-        { name: "Preset 1", id: 1,
-            actuatorValues: "Need values and how they will be stored"},
-        { name: "Preset 2", id: 2,
-            actuatorValues: "same as above"},
-        ]);
-    // Variables
-    let tempName;
-
     // display
     return(
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={styles.container}>
             {/* Presets listed */}
             <FlatList scrollEnabled={true} style={ styles.pageArea } data={presets} renderItem={({ item })=> (
                 <View style={[ styles.preset ]}>
@@ -229,7 +240,9 @@ export default function PresetsScreen( { navigation } ) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "white",
+        backgroundColor: '#43B2D1',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     // for area at the bottom of the screen
     pageArea: {
@@ -249,7 +262,7 @@ const styles = StyleSheet.create({
         borderWidth: "2",
         flexDirection: "row",
         justifyContent: "flex-start",
-        backgroundColor: "#88ccff",
+        backgroundColor: "#ffffff",
         scrollEnabled: true,
     },
     presetButton: {
