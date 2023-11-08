@@ -6,6 +6,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { globalStyles } from '../styles/global';
+import { ScrollView } from 'react-native';
+import { FlatList } from 'react-native';
+
+
 
 export default function MoveScreen() {
     //DECLARATIONS
@@ -17,9 +21,11 @@ export default function MoveScreen() {
     const [inputName, setInputName] = useState('');
     const [inputPercent, setInputPercent] = useState('');
     const [intervalId, setIntervalId] = useState(null);
-    const startIncreasing = () => startChange(increasePercent);
-    const startDecreasing = () => startChange(decreasePercent);
+    const startIncreasing = (index) => startChange(() => increasePercent(index));
+    const startDecreasing = (index) => startChange(() => decreasePercent(index));
     const [menuVisible, setMenuVisible] = useState(false);
+    const [moves, setMoves] = useState([{ name: 'Default Name', percent: 6 }]);
+    const [selectedMoveIndex, setSelectedMoveIndex] = useState(null);
     
     useEffect(() => {
       return () => {
@@ -29,14 +35,23 @@ export default function MoveScreen() {
       };
     }, [intervalId]);
 
-    const increasePercent = () => {
-        setPercent(prev => (prev < 100 ? prev + 1 : prev));
+    const increasePercent = (index) => {
+        setMoves(prevMoves => {
+            const updatedMoves = [...prevMoves];
+            const currentPercent = updatedMoves[index].percent;
+            updatedMoves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
+            return updatedMoves;
+        });
     };
-
-    const decreasePercent = () => {
-        setPercent(prev => (prev > 0 ? prev - 1 : prev));
+    
+    const decreasePercent = (index) => {
+        setMoves(prevMoves => {
+            const updatedMoves = [...prevMoves];
+            const currentPercent = updatedMoves[index].percent;
+            updatedMoves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
+            return updatedMoves;
+        });
     };
-
     const startChange = (action) => {
         action();
         const id = setInterval(action, 100);
@@ -50,18 +65,27 @@ export default function MoveScreen() {
 
     const handleNameChange = () => {
         if (inputName.trim()) {
-            setName(inputName);
+            setMoves(prevMoves => {
+                const updatedMoves = [...prevMoves];
+                updatedMoves[selectedMoveIndex].name = inputName;
+                return updatedMoves;
+            });
             setInputName('');
             setNameModalVisible(false);
         } else {
             Alert.alert('Error', 'Name cannot be empty!');
         }
     };
+    
 
     const handlePercentChange = () => {
         const newPercent = parseInt(inputPercent, 10);
         if (newPercent >= 0 && newPercent <= 100) {
-            setPercent(newPercent);
+            setMoves(prevMoves => {
+                const updatedMoves = [...prevMoves];
+                updatedMoves[selectedMoveIndex].percent = newPercent;
+                return updatedMoves;
+            });
             setInputPercent('');
             setValueModalVisible(false);
         } else {
@@ -106,105 +130,169 @@ export default function MoveScreen() {
             setMenuVisible(false); // Close the options modal
             setValueModalVisible(true);
         }
+    },
+    // Add the "Remove Move" option
+    {
+        label: 'Remove Move',
+        action: () => {
+            Alert.alert(
+                'Remove Move',
+                'Are you sure you want to remove this move?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'OK',
+                        onPress: () => removeMove(selectedMoveIndex),
+                    },
+                ],
+                { cancelable: false }
+            );
+            setMenuVisible(false); // Close the options modal
+        }
     }
-];
+  ];
+    
+const addNewMove = () => {
+    if (moves.length < 6) {
+      setMoves([...moves, { name: 'Default Name', percent: 6 }]);
+    } else {
+      Alert.alert('Error', 'You can only add up to 6 moves!');
+    }
+  };
 
-
- 
-    return (
-      <View style={styles.container}>
-        <View style={styles.frame}>
-          <View style={styles.header}>
-            <Text style={styles.percentText}>{percent}%</Text>
-            <Text style={styles.nameText}>{name}</Text>
-            <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
-              <Ionicons name="ellipsis-vertical" size={24} color="black" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.buttons}>
-              <TouchableOpacity
-                  style={styles.button}
-                  onPressIn={startDecreasing}
-                  onPressOut={stopChange}>
-                  <Text style={styles.buttonText}>-</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                  style={styles.button}
-                  onPressIn={startIncreasing}
-                  onPressOut={stopChange}>
-                  <Text style={styles.buttonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.addMoveButton} onPress={() => {}}>
-            <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
-          </TouchableOpacity>
-  
-          <OptionModal 
-              isVisible={menuVisible} 
-              onClose={() => setMenuVisible(false)} 
-              options={menuOptions} 
-          />
-
-          <Modal isVisible={isNameModalVisible}>
-              <View style={styles.modalContent}>
-                  <TextInput 
-                      style={styles.input}
-                      value={inputName}
-                      onChangeText={setInputName}
-                      placeholder="Enter new name"
-                  />
-                  <TouchableOpacity onPress={handleNameChange}>
-                      <Text>Confirm</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setNameModalVisible(false)}>
-                      <Text>Close</Text>
-                  </TouchableOpacity>
-              </View>
-          </Modal>
-  
-          <Modal isVisible={isValueModalVisible}>
-              <View style={styles.modalContent}>
-                  <TextInput 
-                      style={styles.input}
-                      value={inputPercent}
-                      onChangeText={setInputPercent}
-                      placeholder="Enter new percentage (0-100)"
-                      keyboardType="numeric"
-                  />
-                  <TouchableOpacity onPress={handlePercentChange}>
-                      <Text>Confirm</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setValueModalVisible(false)}>
-                      <Text>Close</Text>
-                  </TouchableOpacity>
-              </View>
-          </Modal>
+  const renderMove = ({ item, index }) => (
+    <View style={styles.frame}>
+      <View style={styles.header}>
+        <Text style={styles.percentText}>{item.percent}%</Text>
+        <Text style={styles.nameText}>{item.name}</Text>
+        <TouchableOpacity onPress={() => {
+          setSelectedMoveIndex(index); // Update the selected move index
+          setMenuVisible(!menuVisible);
+        }}>
+          <Ionicons name="ellipsis-vertical" size={24} color="black" />
+        </TouchableOpacity>
       </View>
-      );
+      <View style={styles.buttons}>
+        <TouchableOpacity
+          style={styles.button}
+          onPressIn={() => startDecreasing(index)}  // Pass the index here
+          onPressOut={stopChange}
+        >
+          <Text style={styles.buttonText}>-</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPressIn={() => startIncreasing(index)}  // Pass the index here
+          onPressOut={stopChange}
+        >
+          <Text style={styles.buttonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const Separator = () => {
+    return (
+      <View style={{ height: 20 }}></View>
+    );
+  }
+  
+  const removeMove = (index) => {
+    setMoves(prevMoves => prevMoves.filter((_, i) => i !== index));
+    setMenuVisible(false); // Close the menu after removing the move
+  };
+
+
+
+  return (
+    <SafeAreaView style={styles.container}>
+  
+      <FlatList
+        data={moves}
+        renderItem={renderMove}   // Use the renderMove function here
+        keyExtractor={(item, index) => index.toString()}
+        ItemSeparatorComponent={Separator}/>
+          
+    
+  
+      <TouchableOpacity
+        style={styles.addMoveButton}
+        onPress={addNewMove}
+      >
+        <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
+      </TouchableOpacity>
+  
+      <OptionModal
+        isVisible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        options={menuOptions}
+      />
+  
+      <Modal isVisible={isNameModalVisible}>
+        <View style={styles.modalContent}>
+          <TextInput 
+            style={styles.input}
+            value={inputName}
+            onChangeText={setInputName}
+            placeholder="Enter new name"
+          />
+          <TouchableOpacity onPress={handleNameChange}>
+            <Text>Confirm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setNameModalVisible(false)}>
+            <Text>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+  
+      <Modal isVisible={isValueModalVisible}>
+        <View style={styles.modalContent}>
+          <TextInput 
+            style={styles.input}
+            value={inputPercent}
+            onChangeText={setInputPercent}
+            placeholder="Enter new percentage (0-100)"
+            keyboardType="numeric"
+          />
+          <TouchableOpacity onPress={handlePercentChange}>
+            <Text>Confirm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setValueModalVisible(false)}>
+            <Text>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
 }
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 100, // adjust this to move the frame up or down as you like
-    backgroundColor: '#00BCD4',
-  },
+    container: {
+      flex: 1,
+      justifyContent: 'center',  // changed from 'flex-start'
+      alignItems: 'center',
+      paddingTop: 100,
+      backgroundColor: '#00BCD4',
+    },
   frame: {
-    width: '90%',
-    padding: 20,
+    marginLeft: 34,
+    marginTop: 30,
+    width: '80%',
+    padding: 10,
     backgroundColor: 'white',
     borderRadius: 10,
     alignItems: 'center',
+
   },
    header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 10,
     margin: 5,  // Add margin for spacing
   },
   percentText: {
@@ -249,7 +337,7 @@ const styles = StyleSheet.create({
 
   addMoveButton: {
     marginTop: 'auto',  // pushes the button to the bottom of the available space
-    marginBottom: 60,   // adds some space at the bottom for aesthetics
+    marginBottom: 40,   // adds some space at the bottom for aesthetics
     width: '70%',
     height: 60,
     justifyContent: 'center',
@@ -263,6 +351,7 @@ addMoveButtonText: {
     fontWeight: 'bold',
     color: 'black',
     
+
 
   },
 
