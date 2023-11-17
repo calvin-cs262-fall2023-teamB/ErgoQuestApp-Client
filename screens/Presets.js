@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
 import { NavigationContainer, TabActions, TabRouter, NavigationAction, DefaultNavigatorOptions } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
@@ -8,8 +8,16 @@ import Modal from 'react-native-modal';
 import { globalStyles } from '../styles/global';
 import { TextInput } from 'react-native-gesture-handler';
 import Dialog from "react-native-dialog";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function PresetsScreen( { navigation } ) {
+/*
+For using values and functions from other screens:
+https://stackoverflow.com/questions/43953791/calling-functions-from-other-components-in-react-native 
+or 
+https://react.dev/reference/react/createContext -NO: cannot produce and consume in same component
+*/
+
+export default function PresetsScreen( { props, navigation } ) {
     // hooks
     const [renameVisible, setRenameVisible] = useState(false);
     const [createVisible, setCreateVisible] = useState(false);
@@ -17,34 +25,35 @@ export default function PresetsScreen( { navigation } ) {
     const [createOptionsVisible, setCreateOptionsVisible] = useState(false);
     const [selectedID, setSelectedID] = useState(-1);
 
-    /* Presets and values */
-    const [presets, setPresets] = useState([
-        { name: "Preset 1", id: 1,
-            actuatorValues: [{id: 0, position: 0}, {id: 1, position: 100}]},
-        { name: "Preset 2", id: 2,
-            actuatorValues: [{id: 0, position: 50}, {id: 1, position: 50}]},
-        ]);
-
     // Extra Variables
     let tempName;
 
     // functions
     const onPressFunction = () => {
-        console.log('Create Preset Button Tapped');
+        // console.log('Create Preset Button Tapped');
         setCreateVisible(createVisible?false:true);
     };
 
     const onLongPressFunction = () => {
-        console.log('Create Preset Button Held');
+        // console.log('Create Preset Button Held');
         setCreateOptionsVisible(createOptionsVisible?false:true);
     };
 
-    const activate = (id) => {
+    const activate = async (id) => {
         console.log('Activate ID: ', id);
-        for (let i = 0; i < presets.length; i++){
-            if (presets[i].id === id){
-                console.log("Set actuator values to: ");
-                console.log(presets[i].actuatorValues);
+        for (let i = 0; i < global.presets.length; i++){
+            if (global.presets[i].id === id){
+                console.log("Set actuator values to:", global.presets[i].actuatorValues);
+                // DO NOT USE: global.moves = global.presets[i].actuatorValues; // Copies reference not value. Need deep copy.
+                const moveArray = [];
+                for (let j = 0; j < global.presets[i].actuatorValues.length; j ++) {
+                    moveArray.push({
+                        "id": global.presets[i].actuatorValues[j].id,
+                        "name": global.presets[i].actuatorValues[j].name,
+                        "percent": global.presets[i].actuatorValues[j].percent,
+                    })
+                }
+                global.moves = moveArray;
                 return;
             }
         }
@@ -52,19 +61,19 @@ export default function PresetsScreen( { navigation } ) {
     };
 
     const startRename = (id) => {
-        console.log('Rename Preset with ID =', id);
+        // console.log('Rename Preset with ID =', id);
         setSelectedID(id);
         setRenameVisible(renameVisible?false:true);
     }
 
     const startDelete = (id) => {
-        console.log('Delete Preset with ID =', id);
+        // console.log('Delete Preset with ID =', id);
         setSelectedID(id);
         setDeleteVisible(deleteVisible?false:true);
     };
 
     const handleCancel = () => {
-        console.log("Close Dialogs");
+        // console.log("Close Dialogs");
         tempName = "";
         setRenameVisible(false);
         setCreateVisible(false);
@@ -72,78 +81,78 @@ export default function PresetsScreen( { navigation } ) {
         setCreateOptionsVisible(false);
     };
   
-    const renamePreset = () => {
+    const renamePreset = async () => {
         if (selectedID === undefined) {
             console.log("ID is undefined.", selectedID);
             setRenameVisible(false);
         } else {
-            console.log("Rename preset to: " + tempName);
+            // console.log("Rename preset to: " + tempName);
             let newPresets = [];
-            for (let i = 0; i < presets.length; i++){
-                if (presets[i].id === selectedID) {
+            for (let i = 0; i < global.presets.length; i++){
+                if (global.presets[i].id === selectedID) {
                     if (tempName === undefined || tempName === ""){
-                        tempName = "Preset " + presets[i].id;
+                        tempName = "Preset " + global.presets[i].id;
                     }
-                    newPresets.push({id: presets[i].id, name: tempName, actuatorValues: presets[i].actuatorValues})
+                    newPresets.push({id: global.presets[i].id, name: tempName, actuatorValues: global.presets[i].actuatorValues})
                 } else {
-                    newPresets.push(presets[i]);
+                    newPresets.push(global.presets[i]);
                 }
             }
-            setPresets(newPresets);
+            global.presets = newPresets;
             tempName = undefined;
             setSelectedID(undefined);
             setRenameVisible(false);
         }
     };
 
-    const createPreset = () => {
+    const createPreset = async () => {
         let largestIndex = 0;
-        for (let i = 0; i < presets.length; i++) {
-            if (presets[i].id > largestIndex) {
-                largestIndex = presets[i].id;
+        for (let i = 0; i < global.presets.length; i++) {
+            if (global.presets[i].id > largestIndex) {
+                largestIndex = global.presets[i].id;
             }
         }
         const newID = largestIndex + 1;
         if (tempName === "" || tempName == undefined){
             tempName = "Preset " + newID + "";
         }
-        console.log("Create preset: " + tempName);
+        // console.log("Create preset: " + tempName);
         let newPresets = [];
-        for (let i = 0; i < presets.length; i++){
-            newPresets.push(presets[i]);
+        for (let i = 0; i < global.presets.length; i++){
+            newPresets.push(global.presets[i]);
         }
         // TODO: get actuatorValues from move screen
         newPresets.push({
             name: tempName,
             id: newID,
-            actuatorValues: [{id: 0, position: 50}],
+            actuatorValues: global.moves,
         });
-        newPresets[newPresets.length - 1].actuatorValues.push({id: 1, position: 25}); // 2 ways of saving presets available
-        setPresets(newPresets);
+        // newPresets[newPresets.length - 1].actuatorValues.push({id: 1, position: 25}); // 2 ways of saving presets available
+        global.presets = newPresets;
         tempName = undefined;
         setCreateVisible(false);
         setCreateOptionsVisible(false); // just in case
     };
 
-    const deletePreset = () => {
+    const deletePreset = async () => {
         if (selectedID === undefined) {
             console.log("ID is undefined.", selectedID);
             setDeleteVisible(false);
         } else {
             let newPresets = [];
-            for (let i = 0; i < presets.length; i++){
-                if (presets[i].id !== selectedID) {
-                    newPresets.push(presets[i]);
+            for (let i = 0; i < global.presets.length; i++){
+                if (global.presets[i].id !== selectedID) {
+                    newPresets.push(global.presets[i]);
                 }
             }
-            setPresets(newPresets);
+            global.presets = newPresets;
             setSelectedID(undefined);
             setDeleteVisible(false);
         }
     };
 
     const goToMove = () => {
-        console.log("attempting tab switch");
+        // console.log("attempting tab switch");
         setCreateOptionsVisible(false);
         navigation.navigate('Move');
 
@@ -153,7 +162,7 @@ export default function PresetsScreen( { navigation } ) {
     return(
         <View style={styles.container}>
             {/* Presets listed */}
-            <FlatList scrollEnabled={true} style={ styles.pageArea } data={presets} renderItem={({ item })=> (
+            <FlatList scrollEnabled={true} style={ styles.pageArea } data={global.presets} renderItem={({ item })=> (
                 <View style={[ styles.preset ]}>
                     <Pressable 
                         onPress={() => activate( item.id )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';  // useEffect added
 import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, TextInput, Alert } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import Modal from 'react-native-modal';
 import { globalStyles } from '../styles/global';
 import { ScrollView } from 'react-native';
 import { FlatList } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -24,8 +25,9 @@ export default function MoveScreen() {
     const startIncreasing = (index) => startChange(() => increasePercent(index));
     const startDecreasing = (index) => startChange(() => decreasePercent(index));
     const [menuVisible, setMenuVisible] = useState(false);
-    const [moves, setMoves] = useState([{ name: 'Default Name', percent: 6 }]);
     const [selectedMoveIndex, setSelectedMoveIndex] = useState(null);
+    const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
+    const [updater, setUpdater] = useState(0); // for updating flat list on create
     
     useEffect(() => {
       return () => {
@@ -35,23 +37,25 @@ export default function MoveScreen() {
       };
     }, [intervalId]);
 
+    useFocusEffect(() => {
+      setMoves(global.moves);
+      return () => {
+        setMoves(global.moves);
+      }
+    });
+
     const increasePercent = (index) => {
-        setMoves(prevMoves => {
-            const updatedMoves = [...prevMoves];
-            const currentPercent = updatedMoves[index].percent;
-            updatedMoves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
-            return updatedMoves;
-        });
+        const currentPercent = global.moves[index].percent;
+        global.moves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
+        setMoves(global.moves);
     };
     
     const decreasePercent = (index) => {
-        setMoves(prevMoves => {
-            const updatedMoves = [...prevMoves];
-            const currentPercent = updatedMoves[index].percent;
-            updatedMoves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
-            return updatedMoves;
-        });
+        const currentPercent = global.moves[index].percent;
+        global.moves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
+        setMoves(global.moves);
     };
+
     const startChange = (action) => {
         action();
         const id = setInterval(action, 100);
@@ -65,11 +69,22 @@ export default function MoveScreen() {
 
     const handleNameChange = () => {
         if (inputName.trim()) {
-            setMoves(prevMoves => {
-                const updatedMoves = [...prevMoves];
-                updatedMoves[selectedMoveIndex].name = inputName;
-                return updatedMoves;
-            });
+            global.moves[selectedMoveIndex].name = inputName;
+            setMoves(global.moves);
+            // update actuator names in presets
+            for (let i = 0; i < global.presets.length; i++){
+              if (global.presets[i].actuatorValues[selectedMoveIndex].id = global.moves[selectedMoveIndex].id) {
+                global.presets[i].actuatorValues[selectedMoveIndex].name = inputName;
+              } else {
+                for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
+                  if (global.presets[i].actuatorValues[j].id = global.moves[selectedMoveIndex].id) {
+                    global.presets[i].actuatorValues[j].name = inputName;
+                    break;
+                  }
+                }
+              }
+            }
+            // TODO: sync new preset settings to database
             setInputName('');
             setNameModalVisible(false);
         } else {
@@ -81,11 +96,8 @@ export default function MoveScreen() {
     const handlePercentChange = () => {
         const newPercent = parseInt(inputPercent, 10);
         if (newPercent >= 0 && newPercent <= 100) {
-            setMoves(prevMoves => {
-                const updatedMoves = [...prevMoves];
-                updatedMoves[selectedMoveIndex].percent = newPercent;
-                return updatedMoves;
-            });
+            global.moves[selectedMoveIndex].percent = newPercent;
+            setMoves(global.moves);
             setInputPercent('');
             setValueModalVisible(false);
         } else {
@@ -156,10 +168,34 @@ export default function MoveScreen() {
   ];
     
 const addNewMove = () => {
-    if (moves.length < 6) {
-      setMoves([...moves, { name: 'Default Name', percent: 6 }]);
+    if (global.moves.length < 6) {
+        let minimumOpenID = 1; // find lowest open ID value
+        for (let i = 1; i < 7; i++){
+          for (let j = 0; j < global.moves.length; j++){
+            if (global.moves[j].id == i) { // compare with type conversion in case id is read as string
+              minimumOpenID = i + 1;
+              continue;
+            }
+          }
+          if (minimumOpenID == i) {
+            break;
+          }
+        }
+        global.moves.push({ id: minimumOpenID, name: 'New Actuator', percent: 0 }); // did not refresh screen
+        global.moves[0].id = global.moves[0].id;
+        setMoves(global.moves);
+        setUpdater(updater + 1);
+        // update actuator count in presets
+        for (let i = 0; i < global.presets.length; i++){
+          global.presets[i].actuatorValues.push({
+            id: minimumOpenID,
+            name: 'New Actuator',
+            percent: 0
+          });
+        }
+        // TODO: sync new preset settings to database
     } else {
-      Alert.alert('Error', 'You can only add up to 6 moves!');
+        Alert.alert('Error', 'You can only add up to 6 moves!');
     }
   };
 
@@ -197,12 +233,13 @@ const addNewMove = () => {
 
   const Separator = () => {
     return (
-      <View style={{ height: 20 }}></View>
+      <View style={{ height: 1 }}></View>
     );
   }
   
   const removeMove = (index) => {
-    setMoves(prevMoves => prevMoves.filter((_, i) => i !== index));
+    global.moves = (global.moves.filter((_, i) => i !== index));
+    setMoves(global.moves);
     setMenuVisible(false); // Close the menu after removing the move
   };
 
@@ -213,11 +250,12 @@ const addNewMove = () => {
   
       <FlatList
         data={moves}
+        scrollEnabled={true}
+        style={{ maxWidth: "100%" }} // fixes horizontal scroll issue
+        extraData={updater} // allows for immediate re-render when adding new moves; otherwise, re-rendered upon screen movement
         renderItem={renderMove}   // Use the renderMove function here
         keyExtractor={(item, index) => index.toString()}
         ItemSeparatorComponent={Separator}/>
-          
-    
   
       <TouchableOpacity
         style={styles.addMoveButton}
@@ -276,6 +314,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       paddingTop: 100,
       backgroundColor: '#00BCD4',
+      maxWidth: "100%",
     },
   frame: {
     marginLeft: 34,
