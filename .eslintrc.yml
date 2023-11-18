@@ -9,4 +9,9 @@ parserOptions:
   sourceType: module
 plugins:
   - react
-rules: {}
+rules:
+  no-undef:
+    - "off"
+  react/prop-types:
+    # Enable prop-types validation for React components
+    - "warn"
