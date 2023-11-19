@@ -10,192 +10,196 @@ import { ScrollView } from 'react-native';
 import { FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
+/*
+Might be needed for saving actuator positions between sessions:
+https://react-native-async-storage.github.io/async-storage/docs/api/
+else: always set to 0.
+*/
 
 export default function MoveScreen() {
-    //DECLARATIONS
-    const [name, setName] = useState('Default Name'); // Change 'Default Name' to any name you want as the initial value.
-    const [percent, setPercent] = useState(6);
-    const [isMenuModalVisible, setMenuModalVisible] = useState(false);
-    const [isNameModalVisible, setNameModalVisible] = useState(false);
-    const [isValueModalVisible, setValueModalVisible] = useState(false);
-    const [inputName, setInputName] = useState('');
-    const [inputPercent, setInputPercent] = useState('');
-    const [intervalId, setIntervalId] = useState(null);
-    const startIncreasing = (index) => startChange(() => increasePercent(index));
-    const startDecreasing = (index) => startChange(() => decreasePercent(index));
-    const [menuVisible, setMenuVisible] = useState(false);
-    const [selectedMoveIndex, setSelectedMoveIndex] = useState(null);
-    const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
-    const [updater, setUpdater] = useState(0); // for updating flat list on create
-    
-    useEffect(() => {
-      return () => {
-          if (intervalId) {
-              clearInterval(intervalId);
-          }
-      };
-    }, [intervalId]);
+  //DECLARATIONS
+  const [name, setName] = useState('Default Name'); // Change 'Default Name' to any name you want as the initial value.
+  const [percent, setPercent] = useState(6);
+  const [isMenuModalVisible, setMenuModalVisible] = useState(false);
+  const [isNameModalVisible, setNameModalVisible] = useState(false);
+  const [isValueModalVisible, setValueModalVisible] = useState(false);
+  const [inputName, setInputName] = useState('');
+  const [inputPercent, setInputPercent] = useState('');
+  const [intervalId, setIntervalId] = useState(null);
+  const startIncreasing = (index) => startChange(() => increasePercent(index));
+  const startDecreasing = (index) => startChange(() => decreasePercent(index));
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedMoveIndex, setSelectedMoveIndex] = useState(null);
+  const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
+  const [updater, setUpdater] = useState(0); // for updating flat list on create
 
-    useFocusEffect(() => {
-      setMoves(global.moves);
-      return () => {
-        setMoves(global.moves);
-      }
-    });
-
-    const increasePercent = (index) => {
-        const currentPercent = global.moves[index].percent;
-        global.moves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
-        setMoves(global.moves);
-    };
-    
-    const decreasePercent = (index) => {
-        const currentPercent = global.moves[index].percent;
-        global.moves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
-        setMoves(global.moves);
-    };
-
-    const startChange = (action) => {
-        action();
-        const id = setInterval(action, 100);
-        setIntervalId(id);
-    };
-
-    const stopChange = () => {
+  useEffect(() => {
+    return () => {
+      if (intervalId) {
         clearInterval(intervalId);
-        setIntervalId(null);
-    };
-
-    const handleNameChange = () => {
-        if (inputName.trim()) {
-            global.moves[selectedMoveIndex].name = inputName;
-            setMoves(global.moves);
-            // update actuator names in presets
-            for (let i = 0; i < global.presets.length; i++){
-              if (global.presets[i].actuatorValues[selectedMoveIndex].id = global.moves[selectedMoveIndex].id) {
-                global.presets[i].actuatorValues[selectedMoveIndex].name = inputName;
-              } else {
-                for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
-                  if (global.presets[i].actuatorValues[j].id = global.moves[selectedMoveIndex].id) {
-                    global.presets[i].actuatorValues[j].name = inputName;
-                    break;
-                  }
-                }
-              }
-            }
-            // TODO: sync new preset settings to database
-            setInputName('');
-            setNameModalVisible(false);
-        } else {
-            Alert.alert('Error', 'Name cannot be empty!');
-        }
-    };
-    
-
-    const handlePercentChange = () => {
-        const newPercent = parseInt(inputPercent, 10);
-        if (newPercent >= 0 && newPercent <= 100) {
-            global.moves[selectedMoveIndex].percent = newPercent;
-            setMoves(global.moves);
-            setInputPercent('');
-            setValueModalVisible(false);
-        } else {
-            Alert.alert('Error', 'Percentage should be between 0 and 100!');
-        }
-    };
-
-    const OptionModal = ({ isVisible, onClose, options }) => (
-        <Modal isVisible={isVisible}>
-            <View style={styles.modalContent}>
-                {options.map(option => (
-                    <TouchableOpacity key={option.label} onPress={option.action}>
-                        <Text>{option.label}</Text>
-                    </TouchableOpacity>
-                ))}
-                <TouchableOpacity onPress={onClose}>
-                    <Text>Close</Text>
-                </TouchableOpacity>
-            </View>
-        </Modal>
-    );
-
-    const handleMenuOption = (option) => {
-      if (option === 'name') {
-          setNameModalVisible(true);
-      } else if (option === 'value') {
-          setValueModalVisible(true);
       }
+    };
+  }, [intervalId]);
+
+  useFocusEffect(() => {
+    setMoves(global.moves);
+    return () => {
+      setMoves(global.moves);
+    }
+  });
+
+  const increasePercent = (index) => {
+    const currentPercent = global.moves[index].percent;
+    global.moves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
+    setMoves(global.moves);
+  };
+
+  const decreasePercent = (index) => {
+    const currentPercent = global.moves[index].percent;
+    global.moves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
+    setMoves(global.moves);
+  };
+
+  const startChange = (action) => {
+    action();
+    const id = setInterval(action, 100);
+    setIntervalId(id);
+  };
+
+  const stopChange = () => {
+    clearInterval(intervalId);
+    setIntervalId(null);
+  };
+
+  const handleNameChange = () => {
+    if (inputName.trim()) {
+      global.moves[selectedMoveIndex].name = inputName;
+      setMoves(global.moves);
+      // update actuator names in presets
+      for (let i = 0; i < global.presets.length; i++) {
+        if (global.presets[i].actuatorValues[selectedMoveIndex].id = global.moves[selectedMoveIndex].id) {
+          global.presets[i].actuatorValues[selectedMoveIndex].name = inputName;
+        } else {
+          for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
+            if (global.presets[i].actuatorValues[j].id = global.moves[selectedMoveIndex].id) {
+              global.presets[i].actuatorValues[j].name = inputName;
+              break;
+            }
+          }
+        }
+      }
+      // TODO: sync new preset settings to database
+      setInputName('');
+      setNameModalVisible(false);
+    } else {
+      Alert.alert('Error', 'Name cannot be empty!');
+    }
+  };
+
+
+  const handlePercentChange = () => {
+    const newPercent = parseInt(inputPercent, 10);
+    if (newPercent >= 0 && newPercent <= 100) {
+      global.moves[selectedMoveIndex].percent = newPercent;
+      setMoves(global.moves);
+      setInputPercent('');
+      setValueModalVisible(false);
+    } else {
+      Alert.alert('Error', 'Percentage should be between 0 and 100!');
+    }
+  };
+
+  const OptionModal = ({ isVisible, onClose, options }) => (
+    <Modal isVisible={isVisible}>
+      <View style={styles.modalContent}>
+        {options.map(option => (
+          <TouchableOpacity key={option.label} onPress={option.action}>
+            <Text>{option.label}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity onPress={onClose}>
+          <Text>Close</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+
+  const handleMenuOption = (option) => {
+    if (option === 'name') {
+      setNameModalVisible(true);
+    } else if (option === 'value') {
+      setValueModalVisible(true);
+    }
   };
 
   const menuOptions = [
-    { 
-        label: 'Change Name', 
-        action: () => {
-            setMenuVisible(false); // Close the options modal
-            setNameModalVisible(true);
-        }
+    {
+      label: 'Change Name',
+      action: () => {
+        setMenuVisible(false); // Close the options modal
+        setNameModalVisible(true);
+      }
     },
-    { 
-        label: 'Change Value', 
-        action: () => {
-            setMenuVisible(false); // Close the options modal
-            setValueModalVisible(true);
-        }
+    {
+      label: 'Change Value',
+      action: () => {
+        setMenuVisible(false); // Close the options modal
+        setValueModalVisible(true);
+      }
     },
     // Add the "Remove Move" option
     {
-        label: 'Remove Move',
-        action: () => {
-            Alert.alert(
-                'Remove Move',
-                'Are you sure you want to remove this move?',
-                [
-                    {
-                        text: 'Cancel',
-                        style: 'cancel',
-                    },
-                    {
-                        text: 'OK',
-                        onPress: () => removeMove(selectedMoveIndex),
-                    },
-                ],
-                { cancelable: false }
-            );
-            setMenuVisible(false); // Close the options modal
-        }
+      label: 'Remove Move',
+      action: () => {
+        Alert.alert(
+          'Remove Move',
+          'Are you sure you want to remove this move?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'OK',
+              onPress: () => removeMove(selectedMoveIndex),
+            },
+          ],
+          { cancelable: false }
+        );
+        setMenuVisible(false); // Close the options modal
+      }
     }
   ];
-    
-const addNewMove = () => {
+
+  const addNewMove = () => {
     if (global.moves.length < 6) {
-        let minimumOpenID = 1; // find lowest open ID value
-        for (let i = 1; i < 7; i++){
-          for (let j = 0; j < global.moves.length; j++){
-            if (global.moves[j].id == i) { // compare with type conversion in case id is read as string
-              minimumOpenID = i + 1;
-              continue;
-            }
-          }
-          if (minimumOpenID == i) {
-            break;
+      let minimumOpenID = 1; // find lowest open ID value
+      for (let i = 1; i < 7; i++) {
+        for (let j = 0; j < global.moves.length; j++) {
+          if (global.moves[j].id == i) { // compare with type conversion in case id is read as string
+            minimumOpenID = i + 1;
+            continue;
           }
         }
-        global.moves.push({ id: minimumOpenID, name: 'New Actuator', percent: 0 }); // did not refresh screen
-        global.moves[0].id = global.moves[0].id;
-        setMoves(global.moves);
-        setUpdater(updater + 1);
-        // update actuator count in presets
-        for (let i = 0; i < global.presets.length; i++){
-          global.presets[i].actuatorValues.push({
-            id: minimumOpenID,
-            name: 'New Actuator',
-            percent: 0
-          });
+        if (minimumOpenID == i) {
+          break;
         }
-        // TODO: sync new preset settings to database
+      }
+      global.moves.push({ id: minimumOpenID, name: 'New Actuator', percent: 0 }); // did not refresh screen
+      global.moves[0].id = global.moves[0].id;
+      setMoves(global.moves);
+      setUpdater(updater + 1);
+      // update actuator count in presets
+      for (let i = 0; i < global.presets.length; i++) {
+        global.presets[i].actuatorValues.push({
+          id: minimumOpenID,
+          name: 'New Actuator',
+          percent: 0
+        });
+      }
+      // TODO: sync new preset settings to database
     } else {
-        Alert.alert('Error', 'You can only add up to 6 moves!');
+      Alert.alert('Error', 'You can only add up to 6 moves!');
     }
   };
 
@@ -236,7 +240,7 @@ const addNewMove = () => {
       <View style={{ height: 1 }}></View>
     );
   }
-  
+
   const removeMove = (index) => {
     global.moves = (global.moves.filter((_, i) => i !== index));
     setMoves(global.moves);
@@ -247,7 +251,7 @@ const addNewMove = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-  
+
       <FlatList
         data={moves}
         scrollEnabled={true}
@@ -255,24 +259,24 @@ const addNewMove = () => {
         extraData={updater} // allows for immediate re-render when adding new moves; otherwise, re-rendered upon screen movement
         renderItem={renderMove}   // Use the renderMove function here
         keyExtractor={(item, index) => index.toString()}
-        ItemSeparatorComponent={Separator}/>
-  
+        ItemSeparatorComponent={Separator} />
+
       <TouchableOpacity
         style={styles.addMoveButton}
         onPress={addNewMove}
       >
         <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
       </TouchableOpacity>
-  
+
       <OptionModal
         isVisible={menuVisible}
         onClose={() => setMenuVisible(false)}
         options={menuOptions}
       />
-  
+
       <Modal isVisible={isNameModalVisible}>
         <View style={styles.modalContent}>
-          <TextInput 
+          <TextInput
             style={styles.input}
             value={inputName}
             onChangeText={setInputName}
@@ -286,10 +290,10 @@ const addNewMove = () => {
           </TouchableOpacity>
         </View>
       </Modal>
-  
+
       <Modal isVisible={isValueModalVisible}>
         <View style={styles.modalContent}>
-          <TextInput 
+          <TextInput
             style={styles.input}
             value={inputPercent}
             onChangeText={setInputPercent}
@@ -308,14 +312,14 @@ const addNewMove = () => {
   );
 }
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: 'center',  // changed from 'flex-start'
-      alignItems: 'center',
-      paddingTop: 100,
-      backgroundColor: '#00BCD4',
-      maxWidth: "100%",
-    },
+  container: {
+    flex: 1,
+    justifyContent: 'center',  // changed from 'flex-start'
+    alignItems: 'center',
+    paddingTop: 100,
+    backgroundColor: '#00BCD4',
+    maxWidth: "100%",
+  },
   frame: {
     marginLeft: 34,
     marginTop: 30,
@@ -326,7 +330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
   },
-   header: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -344,7 +348,7 @@ const styles = StyleSheet.create({
     width: '70%', // adjusted for bigger buttons
     marginBottom: 20,
   },
-   button: {
+  button: {
     width: 60, // adjusted size
     height: 60, // adjusted size
     justifyContent: 'center',
@@ -385,11 +389,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,  // This value has been changed to match the frame's borderRadius
   },
 
-addMoveButtonText: {
+  addMoveButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: 'black',
-    
+
 
 
   },

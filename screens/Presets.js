@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
-import { NavigationContainer, TabActions, TabRouter, NavigationAction, DefaultNavigatorOptions } from '@react-navigation/native';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import { globalStyles } from '../styles/global';
-import { TextInput } from 'react-native-gesture-handler';
 import Dialog from "react-native-dialog";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { globalStyles } from '../styles/global';
 
 /*
 For using values and functions from other screens:
@@ -17,36 +12,47 @@ or
 https://react.dev/reference/react/createContext -NO: cannot produce and consume in same component
 */
 
-export default function PresetsScreen( { props, navigation } ) {
+export default function PresetsScreen({ props, navigation }) {
     // hooks
     const [renameVisible, setRenameVisible] = useState(false);
     const [createVisible, setCreateVisible] = useState(false);
     const [deleteVisible, setDeleteVisible] = useState(false);
+    const [presetOptionsVisible, setPresetOptionsVisible] = useState(false);
     const [createOptionsVisible, setCreateOptionsVisible] = useState(false);
     const [selectedID, setSelectedID] = useState(-1);
+    const [updating, setUpdating] = useState(-1);
 
     // Extra Variables
     let tempName;
 
+    // screen refresh
+    // useFocusEffect(() => {
+    //     // highlight current selected preset?
+    //     return () => {
+
+    //     }
+    //   });
+
     // functions
-    const onPressFunction = () => {
+    const onCreatePress = () => {
         // console.log('Create Preset Button Tapped');
-        setCreateVisible(createVisible?false:true);
+        setCreateVisible(createVisible ? false : true);
     };
 
-    const onLongPressFunction = () => {
+    const onCreateLongPress = () => {
         // console.log('Create Preset Button Held');
-        setCreateOptionsVisible(createOptionsVisible?false:true);
+        setCreateOptionsVisible(createOptionsVisible ? false : true);
     };
 
-    const activate = async (id) => {
+    const activate = (id) => {
+        setUpdating(-1);
         console.log('Activate ID: ', id);
-        for (let i = 0; i < global.presets.length; i++){
-            if (global.presets[i].id === id){
+        for (let i = 0; i < global.presets.length; i++) {
+            if (global.presets[i].id === id) {
                 console.log("Set actuator values to:", global.presets[i].actuatorValues);
                 // DO NOT USE: global.moves = global.presets[i].actuatorValues; // Copies reference not value. Need deep copy.
                 const moveArray = [];
-                for (let j = 0; j < global.presets[i].actuatorValues.length; j ++) {
+                for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
                     moveArray.push({
                         "id": global.presets[i].actuatorValues[j].id,
                         "name": global.presets[i].actuatorValues[j].name,
@@ -54,6 +60,7 @@ export default function PresetsScreen( { props, navigation } ) {
                     })
                 }
                 global.moves = moveArray;
+                // highlight active?
                 return;
             }
         }
@@ -63,13 +70,13 @@ export default function PresetsScreen( { props, navigation } ) {
     const startRename = (id) => {
         // console.log('Rename Preset with ID =', id);
         setSelectedID(id);
-        setRenameVisible(renameVisible?false:true);
-    }
+        setRenameVisible(renameVisible ? false : true);
+    };
 
-    const startDelete = (id) => {
+    const openPresetOptions = (id) => {
         // console.log('Delete Preset with ID =', id);
         setSelectedID(id);
-        setDeleteVisible(deleteVisible?false:true);
+        setPresetOptionsVisible(presetOptionsVisible ? false : true);
     };
 
     const handleCancel = () => {
@@ -79,21 +86,22 @@ export default function PresetsScreen( { props, navigation } ) {
         setCreateVisible(false);
         setDeleteVisible(false);
         setCreateOptionsVisible(false);
+        setPresetOptionsVisible(false);
     };
-  
-    const renamePreset = async () => {
+
+    const renamePreset = () => {
         if (selectedID === undefined) {
             console.log("ID is undefined.", selectedID);
             setRenameVisible(false);
         } else {
             // console.log("Rename preset to: " + tempName);
             let newPresets = [];
-            for (let i = 0; i < global.presets.length; i++){
+            for (let i = 0; i < global.presets.length; i++) {
                 if (global.presets[i].id === selectedID) {
-                    if (tempName === undefined || tempName === ""){
+                    if (tempName === undefined || tempName === "") {
                         tempName = "Preset " + global.presets[i].id;
                     }
-                    newPresets.push({id: global.presets[i].id, name: tempName, actuatorValues: global.presets[i].actuatorValues})
+                    newPresets.push({ id: global.presets[i].id, name: tempName, actuatorValues: global.presets[i].actuatorValues })
                 } else {
                     newPresets.push(global.presets[i]);
                 }
@@ -102,23 +110,24 @@ export default function PresetsScreen( { props, navigation } ) {
             tempName = undefined;
             setSelectedID(undefined);
             setRenameVisible(false);
+            setPresetOptionsVisible(false);
         }
     };
 
-    const createPreset = async () => {
-        let largestIndex = 0;
+    const createPreset = () => {
+        let largestIndex = 1;
         for (let i = 0; i < global.presets.length; i++) {
             if (global.presets[i].id > largestIndex) {
                 largestIndex = global.presets[i].id;
             }
         }
         const newID = largestIndex + 1;
-        if (tempName === "" || tempName == undefined){
+        if (tempName === "" || tempName == undefined) {
             tempName = "Preset " + newID + "";
         }
         // console.log("Create preset: " + tempName);
         let newPresets = [];
-        for (let i = 0; i < global.presets.length; i++){
+        for (let i = 0; i < global.presets.length; i++) {
             newPresets.push(global.presets[i]);
         }
         // TODO: get actuatorValues from move screen
@@ -134,22 +143,62 @@ export default function PresetsScreen( { props, navigation } ) {
         setCreateOptionsVisible(false); // just in case
     };
 
-    const deletePreset = async () => {
+    const deletePreset = () => {
         if (selectedID === undefined) {
             console.log("ID is undefined.", selectedID);
             setDeleteVisible(false);
+            setPresetOptionsVisible(false);
         } else {
             let newPresets = [];
-            for (let i = 0; i < global.presets.length; i++){
+            for (let i = 0; i < global.presets.length; i++) {
                 if (global.presets[i].id !== selectedID) {
                     newPresets.push(global.presets[i]);
                 }
             }
             global.presets = newPresets;
+            // remove deleted preset from timed cuelist
+            const newTimes = [];
+            for (let i = 0; i < global.times.length; i++) {
+                if (global.times[i].presetID !== selectedID) {
+                    newTimes.push(global.times[i]);
+                }
+            }
+            global.times = newTimes;
             setSelectedID(undefined);
             setDeleteVisible(false);
+            setPresetOptionsVisible(false);
         }
     };
+
+    const updateActuators = () => {
+        const id = selectedID;
+        console.log('Activate ID: ', id);
+        for (let i = 0; i < global.presets.length; i++) {
+            if (global.presets[i].id === id) {
+                console.log("Set actuator values to:", global.presets[i].actuatorValues);
+                const moveArray = [];
+                for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
+                    moveArray.push({
+                        "id": global.presets[i].actuatorValues[j].id,
+                        "name": global.presets[i].actuatorValues[j].name,
+                        "percent": global.presets[i].actuatorValues[j].percent,
+                    })
+                }
+                global.moves = moveArray;
+                setUpdating(i);
+                setPresetOptionsVisible(false);
+                goToMove();
+                return;
+            }
+        }
+        console.log("ERROR, ID not found in preset array");
+    }
+
+    const finishUpdating = () => {
+        global.presets[updating].actuatorValues = JSON.parse(JSON.stringify(global.moves)); // deep copy
+        alert("Success, " + global.presets[updating].name + " updated!");
+        setUpdating(-1);
+    }
 
     const goToMove = () => {
         // console.log("attempting tab switch");
@@ -159,39 +208,50 @@ export default function PresetsScreen( { props, navigation } ) {
     };
 
     // display
-    return(
+    return (
         <View style={styles.container}>
             {/* Presets listed */}
-            <FlatList scrollEnabled={true} style={ styles.pageArea } data={global.presets} renderItem={({ item })=> (
-                <View style={[ styles.preset ]}>
-                    <Pressable 
-                        onPress={() => activate( item.id )}
-                        onLongPress={() => startRename( item.id )}
-                        style={[ styles.presetButton, styles.presetButtonLeft ]}
-                        >
-                        <Text style={[ styles.presetButtonText ] } >{ item.name }</Text>
+            <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} renderItem={({ item }) => (
+                <View style={[styles.preset]}>
+                    <Pressable
+                        onPress={() => activate(item.id)}
+                        onLongPress={() => startRename(item.id)}
+                        style={[styles.presetButton, styles.presetButtonLeft]}
+                    >
+                        <Text style={[styles.presetButtonText]} >{item.name}</Text>
                     </Pressable>
-                    <Pressable 
-                        onPress={() => startRename( item.id )}
-                        onLongPress={() => startDelete( item.id )}
-                        style={[ styles.presetButton, styles.presetButtonRight ]}
-                        >
-                        <Text style={[ styles.presetButtonText ] } > ••• </Text>
+                    <Pressable
+                        onPress={() => openPresetOptions(item.id)}
+                        onLongPress={() => openPresetOptions(item.id)}
+                        style={[styles.presetButton, styles.presetButtonRight]}
+                    >
+                        <Text style={[styles.presetButtonText]} > ••• </Text>
                     </Pressable>
                 </View>
-              )} >
+            )} >
             </FlatList>
 
             {/* "Add Preset" button at bottom of screen */}
-            <View style={[ styles.pageArea, styles.pageBottom ]}>
+            <View style={[styles.pageArea, styles.pageBottom]}>
                 <Pressable
-                    onPress={onPressFunction}
-                    onLongPress={onLongPressFunction}
-                    style={ styles.addButton }
-                    >
+                    onPress={onCreateLongPress}
+                    onLongPress={onCreateLongPress}
+                    style={[styles.addButton, (updating >= 0) ? styles.hide : styles.show]}
+                >
                     {({ pressed }) => (
                         <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
                             Create New Preset
+                        </Text>
+                    )}
+                </Pressable>
+                {/* Update preset */}
+                <Pressable
+                    onPress={finishUpdating}
+                    style={[styles.addButton, (updating < 0) ? styles.hide : styles.show]}
+                >
+                    {({ pressed }) => (
+                        <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
+                            Save over {updating >= 0 ? global.presets[updating].name : "Selected Preset"}?
                         </Text>
                     )}
                 </Pressable>
@@ -199,36 +259,36 @@ export default function PresetsScreen( { props, navigation } ) {
             {/* Dialogs */}
             <View style={globalStyles.container}>
                 {/* RENAME */}
-                <Dialog.Container visible={renameVisible}>
+                <Dialog.Container visible={renameVisible} onBackdropPress={handleCancel}>
                     <Dialog.Title>Rename Preset?</Dialog.Title>
                     <Dialog.Description>
                         Please enter a new name for your preset.
                     </Dialog.Description>
-                    <Dialog.Input onChangeText={(text) => (tempName = text) } />
+                    <Dialog.Input onChangeText={(text) => (tempName = text)} />
                     <Dialog.Button label="Cancel" onPress={handleCancel} />
                     <Dialog.Button label="Confirm" onPress={renamePreset} />
                 </Dialog.Container>
                 {/* CREATE PRESET */}
-                <Dialog.Container visible={createVisible}>
+                <Dialog.Container visible={createVisible} setVisible={setCreateVisible} onBackdropPress={handleCancel}>
                     <Dialog.Title>Create Preset?</Dialog.Title>
                     <Dialog.Description>
                         Enter a name for the preset to save the current actuator values.
                     </Dialog.Description>
-                    <Dialog.Input onChangeText={(text) => (tempName = text) } />
+                    <Dialog.Input onChangeText={(text) => (tempName = text)} />
                     <Dialog.Button label="Cancel" onPress={handleCancel} />
                     <Dialog.Button label="Create" onPress={createPreset} />
                 </Dialog.Container>
                 {/* DELETE PRESET */}
-                <Dialog.Container visible={deleteVisible}>
+                <Dialog.Container visible={deleteVisible} onBackdropPress={handleCancel}>
                     <Dialog.Title>Delete Preset?</Dialog.Title>
                     <Dialog.Description>
                         Are you sure you want to delete this preset? This action is permanent.
                     </Dialog.Description>
                     <Dialog.Button label="Cancel" onPress={handleCancel} />
-                    <Dialog.Button label="DELETE" onPress={deletePreset} style={{color: '#f00'}} />
+                    <Dialog.Button label="DELETE" onPress={deletePreset} style={{ color: '#f00' }} />
                 </Dialog.Container>
                 {/* CREATE OPTIONS */}
-                <Dialog.Container visible={createOptionsVisible} verticalButtons={true}>
+                <Dialog.Container visible={createOptionsVisible} verticalButtons={true} onBackdropPress={handleCancel}>
                     <Dialog.Title>Create Preset:</Dialog.Title>
                     <Dialog.Description>
                         Save current actuator values as a new preset?
@@ -236,12 +296,24 @@ export default function PresetsScreen( { props, navigation } ) {
                     <Dialog.Description>
                         Preset name (optional):
                     </Dialog.Description>
-                    <Dialog.Input onChangeText={(text) => (tempName = text) } />
+                    <Dialog.Input onChangeText={(text) => (tempName = text)} />
                     <Dialog.Button label="Create New Preset" onPress={createPreset} />
                     <Dialog.Button label="Adjust Actuator Values" onPress={goToMove} />
                     <Dialog.Button label="Cancel" onPress={handleCancel} />
                 </Dialog.Container>
-            </View>         
+                {/* PRESET OPTION */}
+                <Dialog.Container visible={presetOptionsVisible} verticalButtons={true} onBackdropPress={handleCancel}>
+                    <Dialog.Title>Preset Options</Dialog.Title>
+                    <Dialog.Description>
+                        Rename preset, Update actuators on move screen, or Delete?
+                    </Dialog.Description>
+                    <Dialog.Button label="Rename Preset" onPress={renamePreset} />
+                    <Dialog.Input onChangeText={(text) => (tempName = text)} />
+                    <Dialog.Button label="Update actuators" onPress={updateActuators} />
+                    <Dialog.Button label="DELETE" onPress={deletePreset} style={{ color: '#f00' }} />
+                    <Dialog.Button label="Cancel" onPress={handleCancel} />
+                </Dialog.Container>
+            </View>
         </View>
     );
 }
@@ -308,4 +380,7 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
     },
-  });
+    hide: {
+        display: "none",
+    },
+});

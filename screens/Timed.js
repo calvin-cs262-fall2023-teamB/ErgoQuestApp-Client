@@ -9,6 +9,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
@@ -16,14 +17,17 @@ import { Picker } from '@react-native-picker/picker';
 const { width, height } = Dimensions.get('window');
 
 const MoveScreen = () => {
-  const [moveList, setMoveList] = useState([{ name: 'Preset 1', time: '30' }]);
+  // hooks
+  const [moveList, setMoveList] = useState([{ presetID: 1, time: 30 }]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('1');
+  const [selectedPreset, setSelectedPreset] = useState(-1);
   const [selectedTime, setSelectedTime] = useState('1');
+  const [updater, setUpdater] = useState(0); // for updating flat list on create
 
+  // refresh
   useEffect(() => {
     let timer;
 
@@ -46,29 +50,56 @@ const MoveScreen = () => {
     };
   }, [isPlaying, countdown, currentMoveIndex, moveList]);
 
+  useFocusEffect(() => {
+    if (global.times.length !== moveList.length) { // preset deletions leading to shorter moveList
+      setMoveList(JSON.parse(JSON.stringify(global.times)));
+      setIsPlaying(false);
+      // TODO: fix anything else
+    }
+    return () => {
+    }
+  });
+
+  // functions
   const startNextMove = () => {
     const nextIndex = currentMoveIndex + 1;
     if (nextIndex < moveList.length) {
       const nextMove = moveList[nextIndex];
-      const timeInSeconds = parseInt(nextMove.time, 10) * 60;
+      const timeInSeconds = nextMove.time * 60;
       setCurrentMoveIndex(nextIndex);
       setCountdown(timeInSeconds);
       setIsPlaying(true);
+      // console.log(`Starting Preset: ${global.preset[nextMove.presetID].name}`);
 
-      console.log(`Starting Preset: ${nextMove.name}`);
+      // activate move code from presets.js:
+      for (let i = 0; i < global.presets.length; i++) {
+        if (global.presets[i].id === nextMove.presetID) {
+          const moveArray = [];
+          for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
+            moveArray.push({
+              "id": global.presets[i].actuatorValues[j].id,
+              "name": global.presets[i].actuatorValues[j].name,
+              "percent": global.presets[i].actuatorValues[j].percent,
+            })
+          }
+          global.moves = moveArray;
+          // highlight active?
+          return;
+        }
+      }
     } else {
       setIsPlaying(false);
     }
   };
 
   const startTimer = () => {
-    if (!isPlaying) {
+    if (!isPlaying && moveList.length > 0) {
       const topMove = moveList[currentMoveIndex];
-      const timeInSeconds = countdown > 0 ? countdown : parseInt(topMove.time, 10) * 60;
+      const timeInSeconds = countdown > 0 ? countdown : topMove.time * 60;
       setCountdown(timeInSeconds);
       setIsPlaying(true);
 
-      console.log(`Starting Preset: ${topMove.name}`);
+      // console.log(`Starting Preset: ${topMove}`);
     } else {
       setIsPlaying(false);
     }
@@ -85,34 +116,19 @@ const MoveScreen = () => {
   };
 
   const addNewMove = () => {
-    const count = selectedPreset;
-    const time = selectedTime;
-
-    if (/^\d+$/.test(count) && /^\d+$/.test(time)) {
-      const newMove = { name: `Preset ${count}`, time: `${time}` };
-      setMoveList([...moveList, newMove]);
-    } else {
-      // Handle invalid input (non-numeric value)
-    }
-  };
-
-  const updateMoveName = (index, text) => {
-    const updatedMoveList = [...moveList];
-    updatedMoveList[index].name = text;
-    setMoveList(updatedMoveList);
-  };
-
-  const updateMoveTime = (index, text) => {
-    const updatedMoveList = [...moveList];
-    updatedMoveList[index].time = text;
-    setMoveList(updatedMoveList);
+    global.times.push({ presetID: selectedPreset, time: selectedTime })
+    JSON.parse(JSON.stringify(global.times));
+    setUpdater(updater + 1);
   };
 
   const clearMoves = () => {
     setMoveList([]);
+    global.times = [];
   };
 
   const editMove = (index) => {
+    setCurrentMoveIndex(index);
+    setSelectedPreset(-1);
     setIsModalVisible(true);
   };
 
@@ -123,7 +139,9 @@ const MoveScreen = () => {
       updatedMoveList[index] = updatedMoveList[index + 1];
       updatedMoveList[index + 1] = temp;
       setMoveList(updatedMoveList);
+      global.times = JSON.parse(JSON.stringify(updatedMoveList));
       setIsModalVisible(false);
+      setUpdater(updater - 1);
     }
   };
 
@@ -134,7 +152,9 @@ const MoveScreen = () => {
       updatedMoveList[index] = updatedMoveList[index - 1];
       updatedMoveList[index - 1] = temp;
       setMoveList(updatedMoveList);
+      global.times = JSON.parse(JSON.stringify(updatedMoveList));
       setIsModalVisible(false);
+      setUpdater(updater - 1);
     }
   };
 
@@ -142,21 +162,35 @@ const MoveScreen = () => {
     const updatedMoveList = [...moveList];
     updatedMoveList.splice(index, 1);
     setMoveList(updatedMoveList);
-
+    global.times = JSON.parse(JSON.stringify(updatedMoveList));
     if (index === currentMoveIndex) {
       startNextMove();
     }
-
+    setUpdater(updater + 1);
     setIsModalVisible(false);
   };
 
   const saveEdit = () => {
     const updatedMoveList = [...moveList];
-    updatedMoveList[currentMoveIndex].name = `Preset ${selectedPreset}`;
+    if (selectedPreset && selectedPreset >= 0) {
+      updatedMoveList[currentMoveIndex].presetID = selectedPreset;
+    }
     updatedMoveList[currentMoveIndex].time = selectedTime;
     setMoveList(updatedMoveList);
+    global.times = JSON.parse(JSON.stringify(updatedMoveList));
     setIsModalVisible(false);
+    setUpdater(updater + 1);
   };
+
+  const getNameFromID = (id) => {
+    for (let i = 0; i < global.presets.length; i++) {
+      if (global.presets[i].id == id) { // use == not ===; type conversion needed
+        return global.presets[i].name;
+      }
+    }
+    console.log("No name found for id", id);
+    return "null";
+  }
 
   const formatTime = (seconds) => {
     if (seconds <= 0) {
@@ -183,8 +217,10 @@ const MoveScreen = () => {
       <View style={styles.header}>
         <Text style={styles.appTitle}>PLAYLISTS</Text>
       </View>
-
-      <ScrollView style={styles.middle}>
+      {/* Display of Cuelist */}
+      <ScrollView style={styles.middle}
+        extraData={updater} // allows for immediate re-render when adding new times; otherwise, re-rendered upon screen movement
+      >
         {moveList.map((move, index) => (
           <View
             style={[styles.presetContainer, index === currentMoveIndex && styles.currentMove]}
@@ -192,27 +228,26 @@ const MoveScreen = () => {
           >
             <TextInput
               style={styles.presetText}
-              onChangeText={(text) => updateMoveName(index, text)}
-              value={move.name}
+              value={getNameFromID(move.presetID)}
             />
             <TextInput
               style={styles.timeText}
-              onChangeText={(text) => updateMoveTime(index, text)}
-              value={move.time}
+              value={move.time.toString() + " minutes"}
             />
             <TouchableOpacity style={styles.editButton} onPress={() => editMove(index)}>
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
           </View>
         ))}
+        {/* Add New Move controls */}
         <View style={styles.newMoveContainer}>
           <Picker
             selectedValue={selectedPreset}
             style={styles.presetPicker}
             onValueChange={(itemValue) => setSelectedPreset(itemValue)}
           >
-            {Array.from({ length: 30 }, (_, i) => (
-              <Picker.Item key={i} label={`Preset ${i + 1}`} value={(i + 1).toString()} />
+            {Array.from({ length: global.presets.length }, (_, i) => (
+              <Picker.Item key={i} label={global.presets[i].name} value={global.presets[i].id} />
             ))}
           </Picker>
           <Picker
@@ -220,8 +255,8 @@ const MoveScreen = () => {
             style={styles.timePicker}
             onValueChange={(itemValue) => setSelectedTime(itemValue)}
           >
-            {Array.from({ length: 1000 }, (_, i) => (
-              <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1).toString()} />
+            {Array.from({ length: 12 }, (_, i) => (
+              <Picker.Item key={i} label={((i + 1) * 5).toString()} value={((i + 1) * 5)} />
             ))}
           </Picker>
           <TouchableOpacity style={styles.addButton} onPress={addNewMove}>
@@ -230,6 +265,7 @@ const MoveScreen = () => {
         </View>
       </ScrollView>
 
+      {/* Display timer controls */}
       <View style={styles.bottom}>
         <View style={styles.buttonsContainer}>
           <TouchableOpacity style={styles.playButton} onPress={startTimer}>
@@ -248,35 +284,40 @@ const MoveScreen = () => {
         </Text>
       </View>
 
+      {/* Edit Move */}
       <Modal isVisible={isModalVisible}>
         <View style={styles.modalContainer}>
-        <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
-      <Ionicons name="arrow-up" size={24} color="black" />
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
-      <Ionicons name="arrow-down" size={24} color="black" />
-    </TouchableOpacity>
+          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
+            <Ionicons name="arrow-up" size={24} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
+            <Ionicons name="arrow-down" size={24} color="black" />
+          </TouchableOpacity>
 
-    {/* Time Picker */}
-    <Picker
-      selectedValue={selectedTime}
-      style={styles.edittimePicker}
-      onValueChange={(itemValue) => setSelectedTime(itemValue)}
-    >
-      {Array.from({ length: 1000 }, (_, i) => (
-        <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1).toString()} />
-      ))}
-    </Picker>
-    {/* Save button */}
-    <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-      <Ionicons name="save" size={24} color="green" />
-    </TouchableOpacity>
-    {/* Close button */}
-    <TouchableOpacity style={styles.closeButton} onPress={() => setIsModalVisible(false)}>
-      <Ionicons name="close" size={24} color="black" />
-    </TouchableOpacity>
-  </View>
-</Modal>
+          {/* Time Picker */}
+          <Picker
+            selectedValue={selectedTime}
+            style={styles.edittimePicker}
+            onValueChange={(itemValue) => setSelectedTime(itemValue)}
+          >
+            {Array.from({ length: 120 }, (_, i) => (
+              <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1)} />
+            ))}
+          </Picker>
+          {/* Save button */}
+          <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
+            <Ionicons name="save" size={24} color="green" />
+          </TouchableOpacity>
+          {/* Close button */}
+          <TouchableOpacity style={styles.closeButton} onPress={() => setIsModalVisible(false)}>
+            <Ionicons name="close" size={24} color="black" />
+          </TouchableOpacity>
+          {/* DELETE button */}
+          <TouchableOpacity style={styles.saveButton} onPress={deleteMove}>
+            <Text style={{ borderWidth: 2, borderBlockColor: "f00" }} >DELETE</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
