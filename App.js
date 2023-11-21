@@ -12,6 +12,8 @@ import TimedScreen from './screens/Timed';
 import HelpModal from './screens/HelpModal';
 import SettingsModal from './screens/Settings';
 
+import './screens/global';
+
 const { width, height } = Dimensions.get('window');
 
 const Tab = createMaterialTopTabNavigator();
