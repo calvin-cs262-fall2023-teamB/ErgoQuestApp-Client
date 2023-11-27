@@ -11,6 +11,8 @@ import PresetsScreen from './screens/Presets';
 import TimedScreen from './screens/Timed';
 import HelpModal from './screens/HelpModal';
 import SettingsModal from './screens/Settings';
+import LoginScreen from './screens/LoginPage';
+import CreateAccountScreen from './screens/createAccountScreen';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,7 +37,7 @@ function HomeScreen({ navigation }) {
           <Ionicons name="ios-help-circle" size={36} color="black" />
         </TouchableOpacity>
         <Image source={require('./assets/StolenLogo_ErgoQuest.png')} />
-        <TouchableOpacity onPress={() => navigation.navigate('SettingsModal')}>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
           <Ionicons name="ios-cog" size={36} color="black" />
         </TouchableOpacity>
       </View>
@@ -78,7 +80,9 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="SettingsModal" component={SettingsModal} />
+        <Stack.Screen name="Settings" component={SettingsModal} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="CreateAccount" component={CreateAccountScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
