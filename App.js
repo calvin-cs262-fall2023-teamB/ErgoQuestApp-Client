@@ -14,6 +14,8 @@ import SettingsModal from './screens/Settings';
 import LoginScreen from './screens/LoginPage';
 import CreateAccountScreen from './screens/createAccountScreen';
 
+import './screens/global';
+
 const { width, height } = Dimensions.get('window');
 
 const Tab = createMaterialTopTabNavigator();
