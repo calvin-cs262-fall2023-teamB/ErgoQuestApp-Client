@@ -29,6 +29,7 @@ const LoginScreen = () => {
                     // User found, handle successful login
                     console.log('Login successful for user:', user);
                     // Navigate to the home screen or perform other actions
+                    navigation.navigate('Settings', {userData: user});
                 } else {
                     // User not found
                     Alert.alert('Login Failed', 'User not found or wrong credentials.');

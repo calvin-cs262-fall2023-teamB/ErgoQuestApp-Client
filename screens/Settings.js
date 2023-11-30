@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 //import BLEScanner from './BLEScanner';
 //import * as Location from 'expo-location';
 
-export default function SettingsModal({ isVisible, onClose }) {
+export default function SettingsModal({ isVisible, onClose, route }) {
   // State to track whether Bluetooth permissions have been requested
   /*
   const [bluetoothPermissionRequested, setBluetoothPermissionRequested] = useState(false);
@@ -36,8 +36,18 @@ export default function SettingsModal({ isVisible, onClose }) {
     }
   }, []);
   */
-
+  const userData = route?.params?.userData || null;
   const navigation = useNavigation(); // Get the navigation object
+
+  const showAccountInfo = () => {
+    if (userData) {
+      // If userData is available, show an alert with the user's information
+      alert(`Name: ${userData.name}\nEmail: ${userData.email}`);
+    } else {
+      // If userData is not available, show a different message
+      alert("Not logged in.");
+    }
+  };
 
   const handleRemovePage = () => {
     navigation.pop(); // This will remove the "Settings Page" from the stack.
@@ -68,7 +78,7 @@ export default function SettingsModal({ isVisible, onClose }) {
         </TouchableOpacity>
       </View>
       <View style={{ position: 'absolute', top: 300, left: 130 }}>
-        <TouchableOpacity onPress={() => alert("Account Information")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+        <TouchableOpacity onPress={showAccountInfo} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Account</Text>
         </TouchableOpacity>
       </View>
