@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const CreateAccountScreen = () => {
@@ -7,16 +7,36 @@ const CreateAccountScreen = () => {
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation();
 
     const goBack = () => {
         //setIsSettingsVisible(false); // Close the modal
         navigation.navigate('Login'); // Navigate
-      };
+    };
+
+    const isEmailInUse = async () => {
+        try {
+            const response = await fetch(`https://ergoquestapp.azurewebsites.net/users?email=${email}`);
+            const users = await response.json();
+            return users.some(user => user.email === email);
+        } catch (error) {
+            console.error('Error checking email:', error);
+            return false;
+        }
+    };
 
     const handleCreateAccount = async () => {
         if (password !== confirmPassword) {
             Alert.alert("Error", "Passwords do not match");
+            return;
+        }
+
+        setIsLoading(true);
+
+        if (await isEmailInUse()) {
+            Alert.alert("Error", "Email already in use");
+            setIsLoading(false);
             return;
         }
 
@@ -31,11 +51,15 @@ const CreateAccountScreen = () => {
                 Alert.alert("Success", "Account successfully created");
                 navigation.navigate('Settings');
             } else {
-                Alert.alert("Error", "Failed to create account");
+                const errorData = await response.json();
+                const errorMessage = errorData.message || "Failed to create account"; // Assuming the server sends back an error message
+                Alert.alert("Error", errorMessage);
             }
         } catch (error) {
             console.error('Error:', error);
             Alert.alert("Error", "Network error");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -67,8 +91,12 @@ const CreateAccountScreen = () => {
                 onChangeText={setConfirmPassword}
                 secureTextEntry
             />
-            <TouchableOpacity style={styles.button} onPress={handleCreateAccount}>
-                <Text style={styles.buttonText}>Create Account</Text>
+            <TouchableOpacity style={styles.button} onPress={handleCreateAccount} disabled={isLoading}>
+                {isLoading ? (
+                    <ActivityIndicator size="small" color="#fff" /> // Show loading indicator
+                ) : (
+                    <Text style={styles.buttonText}>Create Account</Text>
+                )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.button} onPress={goBack}>
                 <Text style={styles.buttonText}>Back</Text>

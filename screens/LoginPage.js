@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigation = useNavigation();
+    const [isLoading, setIsLoading] = useState(false);
 
     const goHomeScreen = () => {
         //setIsSettingsVisible(false); // Close the modal
         navigation.navigate('Home'); // Navigate
     };
-    
+
     const goAccountScreen = () => {
         navigation.navigate('CreateAccount');
     }
 
     const handleLogin = async () => {
+        setIsLoading(true);
         try {
             const response = await fetch('https://ergoquestapp.azurewebsites.net/users');
             const users = await response.json();
@@ -39,6 +41,7 @@ const LoginScreen = () => {
             console.error('Network error:', error);
             Alert.alert('Network Error', 'Unable to connect to the server.');
         }
+        setIsLoading(false);
     };
 
 
@@ -57,8 +60,12 @@ const LoginScreen = () => {
                 onChangeText={setPassword}
                 secureTextEntry
             />
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Login</Text>
+            <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+                {isLoading ? (
+                    <ActivityIndicator size="small" color="#fff" /> // Show loading indicator
+                ) : (
+                    <Text style={styles.buttonText}>Login</Text>
+                )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.button} onPress={goAccountScreen}>
                 <Text style={styles.buttonText}>Create Account</Text>
