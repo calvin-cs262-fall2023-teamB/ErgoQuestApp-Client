@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
+import { center } from '@shopify/react-native-skia';
 
 const { width, height } = Dimensions.get('window');
 
@@ -191,6 +192,8 @@ const MoveScreen = () => {
     console.log("No name found for id", id);
     return "null";
   }
+  
+  
 
   const formatTime = (seconds) => {
     if (seconds <= 0) {
@@ -286,38 +289,52 @@ const MoveScreen = () => {
 
       {/* Edit Move */}
       <Modal isVisible={isModalVisible}>
-        <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
-            <Ionicons name="arrow-up" size={24} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
-            <Ionicons name="arrow-down" size={24} color="black" />
-          </TouchableOpacity>
+  <View style={styles.modalContainer}>
+    {/* Move Up and Move Down buttons */}
+    <View style={styles.modalButtonsContainer}>
+      <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
+        <Ionicons name="arrow-up" size={24} color="black" />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
+        <Ionicons name="arrow-down" size={24} color="black" />
+      </TouchableOpacity>
+    </View>
 
-          {/* Time Picker */}
-          <Picker
-            selectedValue={selectedTime}
-            style={styles.edittimePicker}
-            onValueChange={(itemValue) => setSelectedTime(itemValue)}
-          >
-            {Array.from({ length: 120 }, (_, i) => (
-              <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1)} />
-            ))}
-          </Picker>
-          {/* Save button */}
-          <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-            <Ionicons name="save" size={24} color="green" />
-          </TouchableOpacity>
-          {/* Close button */}
-          <TouchableOpacity style={styles.closeButton} onPress={() => setIsModalVisible(false)}>
-            <Ionicons name="close" size={24} color="black" />
-          </TouchableOpacity>
-          {/* DELETE button */}
-          <TouchableOpacity style={styles.saveButton} onPress={deleteMove}>
-            <Text style={{ borderWidth: 2, borderBlockColor: "f00" }} >DELETE</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+    {/* Time Picker */}
+    <Picker
+  selectedValue={selectedTime}
+  style={styles.edittimePicker}
+  onValueChange={(itemValue) => setSelectedTime(itemValue)}
+>
+  {Array.from({ length: 120 }, (_, i) => (
+    <Picker.Item
+      key={i}
+      label={`${(i + 1)} ${i + 1 === 1 ? 'minute' : 'minutes'}`}  // Adjusted label based on the condition
+      value={(i + 1)}
+    />
+  ))}
+</Picker>
+
+    {/* Save and Close buttons */}
+    <View style={styles.modalButtonsContainer}>
+      <TouchableOpacity style={styles.modalButton} onPress={saveEdit}>
+        <Ionicons name="save" size={24} color="green" />
+        <Text style={{ alignItems: center }}>Save</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.modalButton} onPress={() => setIsModalVisible(false)}>
+        <Ionicons name="close" size={24} color="black" />
+        <Text style={styles.modalButtonText}>Close</Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* DELETE button */}
+<TouchableOpacity style={styles.saveButton} onPress={deleteMove}>
+  <Ionicons name="trash-outline" size={24} color="red" />
+  <Text style={{ color: 'red', marginLeft: -20 }}>Delete</Text>
+</TouchableOpacity>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 };
@@ -452,24 +469,33 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     flexDirection: 'row',
     justifyContent: 'center',
-    padding: -25,  // Increase padding to add more space
-    marginBottom: -10,  // Increase marginBottom to add more space
+    padding: 25,  // Increase padding for better spacing
+    marginBottom: 10,  // Increase marginBottom for better spacing
   },
+
+  // Updated style for the buttons in the modal
   modalButton: {
-    margin: 10,
+    marginVertical: 50,  // Adjusted to vertical spacing
   },
+
+  // Updated style for the edit button
   editButton: {
     backgroundColor: 'lightblue',
-    padding: 10,
+    paddingVertical: 10,  // Adjusted to vertical padding
+    paddingHorizontal: 20,  // Adjusted to horizontal padding
     borderRadius: 5,
     alignItems: 'center',
   },
+
+  // Updated style for the edit button text
   editButtonText: {
     color: 'black',
     fontSize: 16,
   },
+
+  // Updated style for the close button
   closeButton: {
-    margin: 10,
+    marginVertical: 20,  // Adjusted to vertical spacing
   },
 });
 
