@@ -40,9 +40,9 @@ export default function SettingsModal({ isVisible, onClose, route }) {
   const navigation = useNavigation(); // Get the navigation object
 
   const showAccountInfo = () => {
-    if (userData) {
+    if (global.userData) {
       // If userData is available, show an alert with the user's information
-      alert(`Name: ${userData.name}\nEmail: ${userData.email}`);
+      alert(`Name: ${global.userData.name}\nEmail: ${global.userData.email}`);
     } else {
       // If userData is not available, show a different message
       alert("Not logged in.");

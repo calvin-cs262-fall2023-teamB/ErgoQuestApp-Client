@@ -12,3 +12,4 @@ global.presets = [
 ];
 global.moves = [{"id": 1, "name": "default value", "percent": 0}, {"id": 2, "name": "other actuator", "percent": 0}];
 global.times = [];
+global.userData;

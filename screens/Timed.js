@@ -314,7 +314,7 @@ const MoveScreen = () => {
           </TouchableOpacity>
           {/* DELETE button */}
           <TouchableOpacity style={styles.saveButton} onPress={deleteMove}>
-            <Text style={{ borderWidth: 2, borderBlockColor: "f00" }} >DELETE</Text>
+            <Text style={{ borderWidth: 2 }} >DELETE</Text>
           </TouchableOpacity>
         </View>
       </Modal>

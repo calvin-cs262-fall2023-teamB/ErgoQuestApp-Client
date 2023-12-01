@@ -24,12 +24,24 @@ const LoginScreen = () => {
             const users = await response.json();
 
             if (response.ok) {
-                const user = users.find(u => u.email === email && u.password === password);
+                // set up hash
+                // refer to https://stackoverflow.com/a/77581985/21640094 to solve known issue
+                const bcrypt = require('bcryptjs');
+                bcrypt.setRandomFallback((len) => {
+                    let buffer = new Array(len);
+                    for (let i = 0; i < len; i++){
+                        buffer[i] = Math.floor(Math.random() * 256)
+                    }
+                    return buffer;
+                });
+                const user = users.find(u => u.email === email && (bcrypt.compareSync(password, u.password) || password === u.password));
                 if (user) {
                     // User found, handle successful login
                     console.log('Login successful for user:', user);
                     // Navigate to the home screen or perform other actions
-                    navigation.navigate('Settings', {userData: user});
+                    // navigation.navigate('Settings', {userData: user});
+                    global.userData = user;
+                    navigation.navigate('Settings');
                 } else {
                     // User not found
                     Alert.alert('Login Failed', 'User not found or wrong credentials.');
@@ -44,7 +56,6 @@ const LoginScreen = () => {
         }
         setIsLoading(false);
     };
-
 
     return (
         <View style={styles.container}>
