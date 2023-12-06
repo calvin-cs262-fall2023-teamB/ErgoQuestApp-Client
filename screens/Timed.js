@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   SafeAreaView,
-  Dimensions,
   StyleSheet,
   TextInput,
   ScrollView,
@@ -13,7 +12,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
 
-const { width, height } = Dimensions.get('window');
 
 const MoveScreen = () => {
   const [moveList, setMoveList] = useState([{ name: 'Preset 1', time: '30' }]);
@@ -74,9 +72,7 @@ const MoveScreen = () => {
     }
   };
 
-  const pauseTimer = () => {
-    setIsPlaying(false);
-  };
+ 
 
   const stopTimer = () => {
     setIsPlaying(false);
@@ -108,11 +104,8 @@ const MoveScreen = () => {
     setMoveList(updatedMoveList);
   };
 
-  const clearMoves = () => {
-    setMoveList([]);
-  };
 
-  const editMove = (index) => {
+  const editMove = () => {
     setIsModalVisible(true);
   };
 
@@ -138,17 +131,7 @@ const MoveScreen = () => {
     }
   };
 
-  const deleteMove = (index) => {
-    const updatedMoveList = [...moveList];
-    updatedMoveList.splice(index, 1);
-    setMoveList(updatedMoveList);
 
-    if (index === currentMoveIndex) {
-      startNextMove();
-    }
-
-    setIsModalVisible(false);
-  };
 
   const saveEdit = () => {
     const updatedMoveList = [...moveList];
@@ -250,33 +233,33 @@ const MoveScreen = () => {
 
       <Modal isVisible={isModalVisible}>
         <View style={styles.modalContainer}>
-        <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
-      <Ionicons name="arrow-up" size={24} color="black" />
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
-      <Ionicons name="arrow-down" size={24} color="black" />
-    </TouchableOpacity>
+          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
+            <Ionicons name="arrow-up" size={24} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
+            <Ionicons name="arrow-down" size={24} color="black" />
+          </TouchableOpacity>
 
-    {/* Time Picker */}
-    <Picker
-      selectedValue={selectedTime}
-      style={styles.edittimePicker}
-      onValueChange={(itemValue) => setSelectedTime(itemValue)}
-    >
-      {Array.from({ length: 1000 }, (_, i) => (
-        <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1).toString()} />
-      ))}
-    </Picker>
-    {/* Save button */}
-    <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-      <Ionicons name="save" size={24} color="green" />
-    </TouchableOpacity>
-    {/* Close button */}
-    <TouchableOpacity style={styles.closeButton} onPress={() => setIsModalVisible(false)}>
-      <Ionicons name="close" size={24} color="black" />
-    </TouchableOpacity>
-  </View>
-</Modal>
+          {/* Time Picker */}
+          <Picker
+            selectedValue={selectedTime}
+            style={styles.edittimePicker}
+            onValueChange={(itemValue) => setSelectedTime(itemValue)}
+          >
+            {Array.from({ length: 1000 }, (_, i) => (
+              <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1).toString()} />
+            ))}
+          </Picker>
+          {/* Save button */}
+          <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
+            <Ionicons name="save" size={24} color="green" />
+          </TouchableOpacity>
+          {/* Close button */}
+          <TouchableOpacity style={styles.closeButton} onPress={() => setIsModalVisible(false)}>
+            <Ionicons name="close" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
