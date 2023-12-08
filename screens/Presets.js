@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
 import Modal from 'react-native-modal';
 import Dialog from "react-native-dialog";
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 
 import { globalStyles } from '../styles/global';
 
@@ -213,21 +215,23 @@ export default function PresetsScreen({ props, navigation }) {
             {/* Presets listed */}
             <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} renderItem={({ item }) => (
                 <View style={[styles.preset]}>
-                    <Pressable
-                        onPress={() => activate(item.id)}
-                        onLongPress={() => startRename(item.id)}
-                        style={[styles.presetButton, styles.presetButtonLeft]}
-                    >
-                        <Text style={[styles.presetButtonText]} >{item.name}</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={() => openPresetOptions(item.id)}
-                        onLongPress={() => openPresetOptions(item.id)}
-                        style={[styles.presetButton, styles.presetButtonRight]}
-                    >
-                        <Text style={[styles.presetButtonText]} > ••• </Text>
-                    </Pressable>
-                </View>
+                <Pressable
+                  onPress={() => activate(item.id)}
+                  onLongPress={() => startRename(item.id)}
+                  style={[styles.presetButton, styles.presetButtonLeft]}
+                >
+                  <Text style={[styles.presetButtonText]} >{item.name}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => openPresetOptions(item.id)}
+                  onLongPress={() => openPresetOptions(item.id)}
+                  style={[styles.presetButton, styles.presetButtonRight]}
+                >
+                  <View style={styles.iconWrapper}>
+                    <Ionicons name="ellipsis-horizontal" size={24} color="black" />
+                  </View>
+                </Pressable>
+              </View>
             )} >
             </FlatList>
 
@@ -327,49 +331,69 @@ const styles = StyleSheet.create({
     },
     // for area at the bottom of the screen
     pageArea: {
-        width: "98%",
-        marginBottom: "1%",
+        width: "88%",
+        marginBottom: "20%",
         marginLeft: "1%",
         marginRight: "1%",
+        borderRadius: 10,
+        marginTop: "8%"
     },
     preset: {
         width: "98%",
         height: 75,
-        marginBottom: "1%",
+        marginBottom: "2%",
         marginLeft: "1%",
         marginRight: "1%",
         borderStyle: "solid",
-        borderColor: "#000000",
+        borderColor: "#FFFFFF",
         borderWidth: "2",
+        borderRadius: 10,
         flexDirection: "row",
         justifyContent: "flex-start",
         backgroundColor: "#ffffff",
         scrollEnabled: true,
+        borderRadius: 10
     },
     presetButton: {
         flex: 1,
     },
     presetButtonLeft: {
         flexBasis: "80%",
+        alignItems: 'center',
+        justifyContent: 'center',
+        
+        
     },
     presetButtonRight: {
         flexBasis: "20%",
         borderStyle: "solid",
-        borderColor: "#222222",
-        borderLeftWidth: "2",
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderLeftWidth: 10,
+        borderColor: "#FFFFFF"
+
+
+        
     },
     presetButtonText: {
         textAlign: "center",
         justifyContent: "center",
         fontSize: 24,
         padding: "2%",
+        textAlignVertical: 'center',
+        
+        
+        
     },
     pageBottom: {
         height: "10%",
+        
     },
     addButton: {
         width: "100%",
         height: "100%",
+        borderRadius: 20,
+        
     },
     buttonText: {
         alignContent: "center",
@@ -379,8 +403,21 @@ const styles = StyleSheet.create({
         padding: "5%",
         width: "100%",
         height: "100%",
+        
     },
     hide: {
         display: "none",
     },
+
+    iconWrapper: {
+        width: 40, // Width of the circle
+        height: 40, // Height of the circle
+        borderRadius: 50, // Half of the width/height  (Not half anymore)
+        borderWidth: 2, // Width of the border
+        borderColor: 'black', // Border color
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      
 });
