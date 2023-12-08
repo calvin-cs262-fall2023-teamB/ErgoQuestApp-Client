@@ -49,22 +49,46 @@ export default function MoveScreen() {
     }
   });
 
-  const increasePercent = (index) => {
-    setMoves((currentMoves) => {
-      const newMoves = [...currentMoves];
-      const currentPercent = newMoves[index].percent;
-      newMoves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
-      return newMoves;
-    });
+  const increasePercent = async (index) => {
+    const newMoves = [...global.moves];
+    const currentPercent = newMoves[index].percent;
+    const newPercent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
+    newMoves[index].percent = newPercent;
+  
+    setMoves(newMoves);
+  
+    if (global.userData && global.userData.id) {
+      try {
+        const selectedMotorId = newMoves[index].id;
+        await confirmMotorAndPosition(selectedMotorId, newPercent);
+      } catch (error) {
+        console.error('Error updating motor position:', error);
+        Alert.alert('Error', 'Failed to update motor position!');
+      }
+    } else {
+      console.log('User not logged in. Local changes only.');
+    }
   };
   
-  const decreasePercent = (index) => {
-    setMoves((currentMoves) => {
-      const newMoves = [...currentMoves];
-      const currentPercent = newMoves[index].percent;
-      newMoves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
-      return newMoves;
-    });
+  const decreasePercent = async (index) => {
+    const newMoves = [...global.moves];
+    const currentPercent = newMoves[index].percent;
+    const newPercent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
+    newMoves[index].percent = newPercent;
+  
+    setMoves(newMoves);
+  
+    if (global.userData && global.userData.id) {
+      try {
+        const selectedMotorId = newMoves[index].id;
+        await confirmMotorAndPosition(selectedMotorId, newPercent);
+      } catch (error) {
+        console.error('Error updating motor position:', error);
+        Alert.alert('Error', 'Failed to update motor position!');
+      }
+    } else {
+      console.log('User not logged in. Local changes only.');
+    }
   };
 
   const startChange = (action) => {
@@ -81,37 +105,85 @@ export default function MoveScreen() {
     }
   };
 
-  const handleNameChange = () => {
+  const handleNameChange = async () => {
     if (inputName.trim()) {
-      global.moves[selectedMoveIndex].name = inputName;
-      setMoves(global.moves);
-      // update actuator names in presets
+      // Update the local state
+      const updatedMoves = global.moves.map((move, index) => {
+        if (index === selectedMoveIndex) {
+          return { ...move, name: inputName };
+        }
+        return move;
+      });
+  
+      // Update global moves and local state
+      global.moves = updatedMoves;
+      setMoves(updatedMoves);
+  
+      // Update actuator names in presets
       for (let i = 0; i < global.presets.length; i++) {
-        if (global.presets[i].actuatorValues[selectedMoveIndex].id = global.moves[selectedMoveIndex].id) {
+        if (global.presets[i].actuatorValues[selectedMoveIndex].id === global.moves[selectedMoveIndex].id) {
           global.presets[i].actuatorValues[selectedMoveIndex].name = inputName;
         } else {
           for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
-            if (global.presets[i].actuatorValues[j].id = global.moves[selectedMoveIndex].id) {
+            if (global.presets[i].actuatorValues[j].id === global.moves[selectedMoveIndex].id) {
               global.presets[i].actuatorValues[j].name = inputName;
               break;
             }
           }
         }
       }
-      // TODO: sync new preset settings to database
+  
+      // Proceed with database update if the user is logged in
+      if (global.userData && global.userData.id) {
+        try {
+          const selectedMotorId = global.moves[selectedMoveIndex].id;
+          await updateMotorName(selectedMotorId, inputName);
+        } catch (error) {
+          console.error('Error updating motor name:', error);
+          Alert.alert('Error', 'Failed to update motor name!');
+        }
+      } else {
+        console.log('User not logged in. Local changes only.');
+      }
+  
       setInputName('');
       setNameModalVisible(false);
     } else {
       Alert.alert('Error', 'Name cannot be empty!');
     }
   };
+  
 
 
-  const handlePercentChange = () => {
+  const handlePercentChange = async () => {
     const newPercent = parseInt(inputPercent, 10);
     if (newPercent >= 0 && newPercent <= 100) {
-      global.moves[selectedMoveIndex].percent = newPercent;
-      setMoves(global.moves);
+      // Update the local state
+      const updatedMoves = global.moves.map((move, index) => {
+        if (index === selectedMoveIndex) {
+          return { ...move, percent: newPercent };
+        }
+        return move;
+      });
+  
+      // Update global moves and local state
+      global.moves = updatedMoves;
+      setMoves(updatedMoves);
+      setUpdater(updater + 1);
+  
+      // Proceed with database update if the user is logged in
+      if (global.userData && global.userData.id) {
+        try {
+          const selectedMotorId = global.moves[selectedMoveIndex].id;
+          await confirmMotorAndPosition(selectedMotorId, newPercent);
+        } catch (error) {
+          console.error('Error updating motor position:', error);
+          Alert.alert('Error', 'Failed to update motor position!');
+        }
+      } else {
+        console.log('User not logged in. Local changes only.');
+      }
+  
       setInputPercent('');
       setValueModalVisible(false);
     } else {
@@ -221,6 +293,126 @@ export default function MoveScreen() {
       Alert.alert('Error', 'You can only add up to 6 moves!');
     }
   };
+
+  const motorPositionExists = async (motorPositionId) => {
+    try {
+      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}`);
+      if (response.ok) {
+        const motorPositionData = await response.json();
+        return !!motorPositionData.id; // If motor position data with the ID exists, return true
+      }
+      return false; // If the request fails, assume the motor position does not exist
+    } catch (error) {
+      console.error('Error checking motor position existence:', error);
+      return false; // In case of error, assume the motor position does not exist
+    }
+  };
+  
+  const motorExists = async (motorId) => {
+    try {
+      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motors/${motorId}`);
+      if (response.ok) {
+        const motorData = await response.json();
+        return !!motorData.id; // If motor data with the ID exists, return true
+      }
+      return false; // If the request fails, assume the motor does not exist
+    } catch (error) {
+      console.error('Error checking motor existence:', error);
+      return false; // In case of error, assume the motor does not exist
+    }
+  };
+  
+  
+  const confirmMotorAndPosition = async (motorId, percent) => {
+    try {
+      // Get the motor name from global.moves
+      const motorName = global.moves.find(move => move.id === motorId)?.name || 'New Actuator';
+  
+      let motorData;
+  
+      if (await motorExists(motorId)) {
+        // Update existing motor
+        const updateMotorResponse = await fetch(`https://ergoquestapp.azurewebsites.net/motors/${motorId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: motorName }),
+        });
+        motorData = await updateMotorResponse.json();
+      } else {
+        // Create new motor
+        const createMotorResponse = await fetch('https://ergoquestapp.azurewebsites.net/motors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: motorName }),
+        });
+        motorData = await createMotorResponse.json();
+      }
+  
+      // Create or Update MotorPosition
+      const motorPositionData = {
+        angle: percent,
+        motorID: motorData.id,
+        userID: global.userData.id,
+      };
+  
+      // Assuming a similar approach for motor position: check if it exists and then create or update
+      // Implement motorPositionExists and updateMotorPosition logic as per your application's need
+      if (await motorPositionExists(motorId)) {
+        // Update motor position
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(motorPositionData),
+        });
+      } else {
+        // Create motor position
+        await fetch('https://ergoquestapp.azurewebsites.net/motorpositions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(motorPositionData),
+        });
+      }
+    } catch (error) {
+      console.error('Error confirming motor and position:', error);
+      Alert.alert('Error', 'Failed to confirm motor and position!');
+    }
+  };
+  
+  const updateMotorName = async (motorId, newName) => {
+    try {
+      if (await motorExists(motorId)) {
+        // Update existing motor's name
+        await fetch(`https://ergoquestapp.azurewebsites.net/motors/${motorId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+      } else {
+        // Create new motor if it doesn't exist
+        await fetch('https://ergoquestapp.azurewebsites.net/motors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+      }
+    } catch (error) {
+      console.error('Error updating motor name:', error);
+      Alert.alert('Error', 'Failed to update motor name!');
+    }
+  };
+  
 
   const renderMove = ({ item, index }) => (
     <View style={styles.frame}>
