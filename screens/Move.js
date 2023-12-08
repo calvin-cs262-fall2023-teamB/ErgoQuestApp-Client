@@ -452,11 +452,36 @@ export default function MoveScreen() {
     );
   }
 
-  const removeMove = (index) => {
-    global.moves = (global.moves.filter((_, i) => i !== index));
-    setMoves(global.moves);
+  const removeMove = async (index) => {
+    // Always remove the move from the local state
+    const updatedMoves = global.moves.filter((_, i) => i !== index);
+    global.moves = updatedMoves;
+    setMoves(updatedMoves);
     setMenuVisible(false); // Close the menu after removing the move
+  
+    // Proceed with database deletion if the user is logged in
+    if (global.userData && global.userData.id) {
+      try {
+        const motorPositionId = updatedMoves[index].id; // Assuming each move corresponds to a unique motor position ID
+  
+        // Delete the motor position from the database
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        console.log(`Motor position with ID ${motorPositionId} deleted from database.`);
+      } catch (error) {
+        console.error('Error deleting motor position:', error);
+        Alert.alert('Error', 'Failed to delete motor position!');
+      }
+    } else {
+      console.log('User not logged in. Only local changes made.');
+    }
   };
+  
 
 
 
