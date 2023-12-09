@@ -174,6 +174,7 @@ export default function MoveScreen() {
       // Proceed with database update if the user is logged in
       if (global.userData && global.userData.id) {
         try {
+          console.log(selectedMoveIndex);
           const selectedMotorId = global.moves[selectedMoveIndex].id;
           await confirmMotorAndPosition(selectedMotorId, newPercent);
         } catch (error) {
@@ -252,7 +253,7 @@ export default function MoveScreen() {
             },
             {
               text: 'OK',
-              onPress: () => removeMove(selectedMoveIndex),
+              onPress: () => removeMove(),
             },
           ],
           { cancelable: false }
@@ -294,9 +295,9 @@ export default function MoveScreen() {
     }
   };
 
-  const motorPositionExists = async (motorPositionId) => {
+  const motorPositionExists = async (motorPositionId, userID) => {
     try {
-      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}`);
+      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}/${userID}`);
       if (response.ok) {
         const motorPositionData = await response.json();
         return !!motorPositionData.id; // If motor position data with the ID exists, return true
@@ -358,12 +359,13 @@ export default function MoveScreen() {
         motorID: motorData.id,
         userID: global.userData.id,
       };
+
   
       // Assuming a similar approach for motor position: check if it exists and then create or update
       // Implement motorPositionExists and updateMotorPosition logic as per your application's need
-      if (await motorPositionExists(motorId)) {
+      if (await motorPositionExists(motorId, global.userData.id)) {
         // Update motor position
-        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorId}`, {
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorId}/${global.userData.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -452,26 +454,28 @@ export default function MoveScreen() {
     );
   }
 
-  const removeMove = async (index) => {
-    // Always remove the move from the local state
-    const updatedMoves = global.moves.filter((_, i) => i !== index);
+  const removeMove = async () => {
+    console.log(selectedMoveIndex);
+    // Get the motor position ID before removal
+    const motorPositionId = global.moves[selectedMoveIndex]?.id;
+
+    // Remove the move from the local state
+    const updatedMoves = global.moves.filter((_, i) => i !== selectedMoveIndex);
     global.moves = updatedMoves;
     setMoves(updatedMoves);
     setMenuVisible(false); // Close the menu after removing the move
   
     // Proceed with database deletion if the user is logged in
-    if (global.userData && global.userData.id) {
+    if (global.userData && global.userData.id && motorPositionId !== undefined) {
       try {
-        const motorPositionId = updatedMoves[index].id; // Assuming each move corresponds to a unique motor position ID
-  
         // Delete the motor position from the database
-        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}`, {
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}/${global.userData.id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
           },
         });
-  
+
         console.log(`Motor position with ID ${motorPositionId} deleted from database.`);
       } catch (error) {
         console.error('Error deleting motor position:', error);
@@ -480,10 +484,7 @@ export default function MoveScreen() {
     } else {
       console.log('User not logged in. Only local changes made.');
     }
-  };
-  
-
-
+};
 
   return (
     <SafeAreaView style={styles.container}>
