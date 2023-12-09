@@ -34,6 +34,51 @@ export default function MoveScreen() {
   const [updater, setUpdater] = useState(0); // for updating flat list on create
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
 
+  const fetchData = async () => {
+    try {
+      console.log('Fetching data for user:', global.userData.id);
+  
+      // Fetch motors data
+      const motorsResponse = await fetch('https://ergoquestapp.azurewebsites.net/motors');
+      const motorsData = await motorsResponse.json();
+      console.log('Motors data:', motorsData);
+  
+      // Fetch motor positions data
+      const motorPositionsResponse = await fetch('https://ergoquestapp.azurewebsites.net/motorpositions');
+      const motorPositionsData = await motorPositionsResponse.json();
+      console.log('Motor positions data:', motorPositionsData);
+  
+      console.log('Global Data: ', global.userData);
+  
+      // Filter motor positions by global.userData.id
+      const filteredMotorPositions = motorPositionsData.filter(position => position?.userid && Number(position.userid) === Number(global.userData.id));
+      console.log('Filtered motor positions:', filteredMotorPositions);
+  
+      // Merge the data
+      const mergedData = filteredMotorPositions.map(motorPosition => {
+        const motor = motorsData.find(m => m?.id && Number(m.id) === Number(motorPosition.motorid));
+        return {
+          id: motorPosition.motorid,
+          name: motor ? motor.name : 'Unknown',
+          percent: motorPosition.angle
+        };
+      });
+  
+      global.moves = mergedData;
+      setMoves(mergedData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Alert.alert('Error', 'Failed to fetch data!');
+    }
+  };
+
+  useEffect(() => {
+    // Check if the user is logged in
+    if (global.userData && global.userData.id) {
+      fetchData(); // Call the fetchData function
+    }
+  }, [global.userData]);
+
   useEffect(() => {
     return () => {
       if (intervalId) {
@@ -41,7 +86,7 @@ export default function MoveScreen() {
       }
     };
   }, [intervalId]);
-
+    
   useFocusEffect(() => {
     setMoves(global.moves);
     return () => {
