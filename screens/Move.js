@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';  // useEffect added
+import React, { useState, useEffect, useRef } from 'react';  // useEffect added
 import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, TextInput, Alert } from 'react-native';
 import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
@@ -32,6 +32,7 @@ export default function MoveScreen() {
   const [selectedMoveIndex, setSelectedMoveIndex] = useState(null);
   const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
   const [updater, setUpdater] = useState(0); // for updating flat list on create
+  const [isMenuExpanded, setIsMenuExpanded] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -49,26 +50,35 @@ export default function MoveScreen() {
   });
 
   const increasePercent = (index) => {
-    const currentPercent = global.moves[index].percent;
-    global.moves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
-    setMoves(global.moves);
+    setMoves((currentMoves) => {
+      const newMoves = [...currentMoves];
+      const currentPercent = newMoves[index].percent;
+      newMoves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
+      return newMoves;
+    });
   };
-
+  
   const decreasePercent = (index) => {
-    const currentPercent = global.moves[index].percent;
-    global.moves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
-    setMoves(global.moves);
+    setMoves((currentMoves) => {
+      const newMoves = [...currentMoves];
+      const currentPercent = newMoves[index].percent;
+      newMoves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
+      return newMoves;
+    });
   };
 
   const startChange = (action) => {
+    stopChange(); // Clear any existing interval before starting a new one
     action();
     const id = setInterval(action, 100);
     setIntervalId(id);
   };
-
+  
   const stopChange = () => {
-    clearInterval(intervalId);
-    setIntervalId(null);
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
   };
 
   const handleNameChange = () => {
@@ -109,16 +119,25 @@ export default function MoveScreen() {
     }
   };
 
+  const toggleMenuSize = () => {
+    setIsMenuExpanded(!isMenuExpanded); // This toggles the expanded state
+  };
+
   const OptionModal = ({ isVisible, onClose, options }) => (
     <Modal isVisible={isVisible}>
       <View style={styles.modalContent}>
         {options.map(option => (
           <TouchableOpacity key={option.label} onPress={option.action}>
-            <Text>{option.label}</Text>
+            {/* Apply the style conditionally based on isMenuExpanded */}
+            <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+              {option.label}
+            </Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity onPress={onClose}>
-          <Text>Close</Text>
+          <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+            Close
+          </Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -282,32 +301,42 @@ export default function MoveScreen() {
             onChangeText={setInputName}
             placeholder="Enter new name"
           />
-          <TouchableOpacity onPress={handleNameChange}>
-            <Text>Confirm</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setNameModalVisible(false)}>
-            <Text>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+         <TouchableOpacity onPress={handleNameChange}>
+      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+        Confirm
+      </Text>
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => setNameModalVisible(false)}>
+      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+        Close
+      </Text>
+    </TouchableOpacity>
+  </View>
+</Modal>
 
-      <Modal isVisible={isValueModalVisible}>
-        <View style={styles.modalContent}>
-          <TextInput
-            style={styles.input}
-            value={inputPercent}
-            onChangeText={setInputPercent}
-            placeholder="Enter new percentage (0-100)"
-            keyboardType="numeric"
-          />
-          <TouchableOpacity onPress={handlePercentChange}>
-            <Text>Confirm</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setValueModalVisible(false)}>
-            <Text>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+<Modal isVisible={isValueModalVisible}>
+  <View style={styles.modalContent}>
+    <TextInput
+      style={styles.input}
+      value={inputPercent}
+      onChangeText={setInputPercent}
+      placeholder="Enter new percentage (0-100)"
+      keyboardType="numeric"
+    />
+    <TouchableOpacity onPress={handlePercentChange}>
+      {/* Apply the style conditionally based on isMenuExpanded */}
+      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+        Confirm
+      </Text>
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => setValueModalVisible(false)}>
+      {/* Apply the style conditionally based on isMenuExpanded */}
+      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+        Close
+      </Text>
+    </TouchableOpacity>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 }
@@ -317,7 +346,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',  // changed from 'flex-start'
     alignItems: 'center',
     paddingTop: 100,
-    backgroundColor: '#00BCD4',
+    backgroundColor: '#43B2D1',
     maxWidth: "100%",
   },
   frame: {
@@ -397,5 +426,15 @@ const styles = StyleSheet.create({
 
 
   },
+
+  optionText: {
+    fontSize: 18, 
+  },
+
+  optionTextExpanded: {
+    fontSize: 24, 
+  },
+
+
 
 });
