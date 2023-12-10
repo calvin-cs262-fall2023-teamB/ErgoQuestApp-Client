@@ -8,69 +8,101 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
 
 
 const MoveScreen = () => {
-  const [moveList, setMoveList] = useState([{ name: 'Preset 1', time: '30' }]);
+  const [moveList, setMoveList] = useState([{ presetID: 1, time: 30 }]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('1');
-  const [selectedTime, setSelectedTime] = useState('1');
+  const [selectedPreset, setSelectedPreset] = useState(global.presets.length > 0 ? global.presets[0].id : -1);
+  const [selectedTime, setSelectedTime] = useState('5');
+  const [updater, setUpdater] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
-    let timer;
-
-    if (isPlaying && countdown > 0) {
-      timer = setInterval(() => {
+    let interval;
+    let startTime;
+    let elapsedTime = 0;
+  
+    const startTimer = () => {
+      startTime = performance.now();
+      interval = setInterval(() => {
+        const now = performance.now();
+        const elapsedSeconds = (now - startTime) / 1000;
+        elapsedTime += elapsedSeconds;
+  
         setCountdown((prevCountdown) => {
-          if (prevCountdown === 1) {
+          const adjustedCountdown = prevCountdown - Math.floor(elapsedTime);
+          if (adjustedCountdown <= 0) {
             startNextMove();
             return 0;
           }
-          return prevCountdown - 1;
+          return adjustedCountdown;
         });
-      }, 1000);
+  
+        startTime = now;
+      }, 1000); // Run every second
+    };
+  
+    if (isPlaying && countdown > 0) {
+      startTimer();
     } else if (isPlaying && countdown === 0) {
       startNextMove();
     }
-
+  
     return () => {
-      clearInterval(timer);
+      clearInterval(interval);
     };
   }, [isPlaying, countdown, currentMoveIndex, moveList]);
+  
+  
 
+  useFocusEffect(() => {
+    if (global.times.length !== moveList.length) {
+      setMoveList(JSON.parse(JSON.stringify(global.times)));
+      setIsPlaying(false);
+    }
+    return () => {};
+  });
+
+  // functions
   const startNextMove = () => {
     const nextIndex = currentMoveIndex + 1;
     if (nextIndex < moveList.length) {
       const nextMove = moveList[nextIndex];
-      const timeInSeconds = parseInt(nextMove.time, 10) * 60;
       setCurrentMoveIndex(nextIndex);
-      setCountdown(timeInSeconds);
+      setCountdown(nextMove.time * 60);
       setIsPlaying(true);
-
-      console.log(`Starting Preset: ${nextMove.name}`);
+      const presetName = getNameFromID(nextMove.presetID);
+      console.log(`Starting Preset: ${presetName}`);
     } else {
       setIsPlaying(false);
     }
   };
+  
 
   const startTimer = () => {
-    if (!isPlaying) {
+    if (!isPlaying && moveList.length > 0) {
       const topMove = moveList[currentMoveIndex];
-      const timeInSeconds = countdown > 0 ? countdown : parseInt(topMove.time, 10) * 60;
+      const timeInSeconds = countdown > 0 ? countdown : topMove.time * 60;
       setCountdown(timeInSeconds);
       setIsPlaying(true);
-
-      console.log(`Starting Preset: ${topMove.name}`);
+  
+      // Log the starting preset for the first move
+      const presetName = getNameFromID(topMove.presetID);
+      console.log(`Starting Preset: ${presetName}`);
     } else {
       setIsPlaying(false);
     }
   };
+  
 
  
 
@@ -81,27 +113,19 @@ const MoveScreen = () => {
   };
 
   const addNewMove = () => {
-    const count = selectedPreset;
-    const time = selectedTime;
-
-    if (/^\d+$/.test(count) && /^\d+$/.test(time)) {
-      const newMove = { name: `Preset ${count}`, time: `${time}` };
-      setMoveList([...moveList, newMove]);
-    } else {
-      // Handle invalid input (non-numeric value)
+    if (selectedPreset === null || selectedPreset === -1) {
+      setErrorMessage('Error: No preset selected');
+      return;
     }
-  };
-
-  const updateMoveName = (index, text) => {
-    const updatedMoveList = [...moveList];
-    updatedMoveList[index].name = text;
-    setMoveList(updatedMoveList);
-  };
-
-  const updateMoveTime = (index, text) => {
-    const updatedMoveList = [...moveList];
-    updatedMoveList[index].time = text;
-    setMoveList(updatedMoveList);
+  
+    global.times.push({ presetID: selectedPreset, time: selectedTime });
+    JSON.parse(JSON.stringify(global.times));
+    setUpdater(updater + 1);
+    setErrorMessage(''); // Clear error message on successful move addition
+  
+    // Reset selectedPreset to a default value (modify if needed)
+    setSelectedPreset(global.presets.length > 0 ? global.presets[0].id : -1);
+    setSelectedTime('5'); // Reset selectedTime to a default value (modify if needed)
   };
 
 
@@ -116,7 +140,9 @@ const MoveScreen = () => {
       updatedMoveList[index] = updatedMoveList[index + 1];
       updatedMoveList[index + 1] = temp;
       setMoveList(updatedMoveList);
+      global.times = JSON.parse(JSON.stringify(updatedMoveList));
       setIsModalVisible(false);
+      setUpdater(updater - 1);
     }
   };
 
@@ -127,19 +153,47 @@ const MoveScreen = () => {
       updatedMoveList[index] = updatedMoveList[index - 1];
       updatedMoveList[index - 1] = temp;
       setMoveList(updatedMoveList);
+      global.times = JSON.parse(JSON.stringify(updatedMoveList));
       setIsModalVisible(false);
+      setUpdater(updater - 1);
     }
   };
 
-
+  const deleteMove = (index) => {
+    const updatedMoveList = [...moveList];
+    updatedMoveList.splice(index, 1);
+    setMoveList(updatedMoveList);
+    global.times = JSON.parse(JSON.stringify(updatedMoveList));
+    if (index === currentMoveIndex) {
+      startNextMove();
+    }
+    setUpdater(updater + 1);
+    setIsModalVisible(false);
+  };
 
   const saveEdit = () => {
     const updatedMoveList = [...moveList];
-    updatedMoveList[currentMoveIndex].name = `Preset ${selectedPreset}`;
+    if (selectedPreset && selectedPreset >= 0) {
+      updatedMoveList[currentMoveIndex].presetID = selectedPreset;
+    }
     updatedMoveList[currentMoveIndex].time = selectedTime;
     setMoveList(updatedMoveList);
+    global.times = JSON.parse(JSON.stringify(updatedMoveList));
     setIsModalVisible(false);
+    setUpdater(updater + 1);
   };
+
+  const getNameFromID = (id) => {
+    for (let i = 0; i < global.presets.length; i++) {
+      if (global.presets[i].id == id) { // use == not ===; type conversion needed
+        return global.presets[i].name;
+      }
+    }
+    console.log("No name found for id", id);
+    return "null";
+  }
+  
+  
 
   const formatTime = (seconds) => {
     if (seconds <= 0) {
@@ -163,11 +217,15 @@ const MoveScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.appTitle}>PLAYLISTS</Text>
-      </View>
 
-      <ScrollView style={styles.middle}>
+      {/* Display of Cuelist */}
+      <ScrollView style={styles.middle}
+        extraData={updater} // allows for immediate re-render when adding new times; otherwise, re-rendered upon screen movement
+      >
+          {/* "PLAYLISTS" text at the top */}
+   <View style={styles.playlistHeader}>
+    <Text style={styles.playlistHeaderText}>PLAYLISTS</Text>
+    </View>
         {moveList.map((move, index) => (
           <View
             style={[styles.presetContainer, index === currentMoveIndex && styles.currentMove]}
@@ -175,27 +233,26 @@ const MoveScreen = () => {
           >
             <TextInput
               style={styles.presetText}
-              onChangeText={(text) => updateMoveName(index, text)}
-              value={move.name}
+              value={getNameFromID(move.presetID)}
             />
             <TextInput
               style={styles.timeText}
-              onChangeText={(text) => updateMoveTime(index, text)}
-              value={move.time}
+              value={move.time.toString() + " minutes"}
             />
             <TouchableOpacity style={styles.editButton} onPress={() => editMove(index)}>
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
           </View>
         ))}
+        {/* Add New Move controls */}
         <View style={styles.newMoveContainer}>
           <Picker
             selectedValue={selectedPreset}
             style={styles.presetPicker}
             onValueChange={(itemValue) => setSelectedPreset(itemValue)}
           >
-            {Array.from({ length: 30 }, (_, i) => (
-              <Picker.Item key={i} label={`Preset ${i + 1}`} value={(i + 1).toString()} />
+            {Array.from({ length: global.presets.length }, (_, i) => (
+              <Picker.Item key={i} label={global.presets[i].name} value={global.presets[i].id} />
             ))}
           </Picker>
           <Picker
@@ -203,8 +260,8 @@ const MoveScreen = () => {
             style={styles.timePicker}
             onValueChange={(itemValue) => setSelectedTime(itemValue)}
           >
-            {Array.from({ length: 1000 }, (_, i) => (
-              <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1).toString()} />
+            {Array.from({ length: 12 }, (_, i) => (
+              <Picker.Item key={i} label={((i + 1) * 5).toString()} value={((i + 1) * 5)} />
             ))}
           </Picker>
           <TouchableOpacity style={styles.addButton} onPress={addNewMove}>
@@ -213,6 +270,7 @@ const MoveScreen = () => {
         </View>
       </ScrollView>
 
+      {/* Display timer controls */}
       <View style={styles.bottom}>
         <View style={styles.buttonsContainer}>
           <TouchableOpacity style={styles.playButton} onPress={startTimer}>
@@ -231,35 +289,66 @@ const MoveScreen = () => {
         </Text>
       </View>
 
+      {/* Edit Move */}
       <Modal isVisible={isModalVisible}>
-        <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
-            <Ionicons name="arrow-up" size={24} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
-            <Ionicons name="arrow-down" size={24} color="black" />
-          </TouchableOpacity>
+  <View style={styles.modalContainer}>
+    {/* Move Up and Move Down buttons */}
+    <View style={styles.modalButtonsContainer}>
+      <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
+        <Ionicons name="arrow-up" size={24} color="black" />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveDown(currentMoveIndex)}>
+        <Ionicons name="arrow-down" size={24} color="black" />
+      </TouchableOpacity>
+    </View>
 
-          {/* Time Picker */}
-          <Picker
-            selectedValue={selectedTime}
-            style={styles.edittimePicker}
-            onValueChange={(itemValue) => setSelectedTime(itemValue)}
-          >
-            {Array.from({ length: 1000 }, (_, i) => (
-              <Picker.Item key={i} label={(i + 1).toString()} value={(i + 1).toString()} />
-            ))}
-          </Picker>
-          {/* Save button */}
-          <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
-            <Ionicons name="save" size={24} color="green" />
-          </TouchableOpacity>
-          {/* Close button */}
-          <TouchableOpacity style={styles.closeButton} onPress={() => setIsModalVisible(false)}>
-            <Ionicons name="close" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      {/* Create Move Error */}
+    <Modal isVisible={errorMessage !== ''}>
+  <View style={styles.modalContainer}>
+    <Text style={styles.errorText}>{errorMessage}</Text>
+    <TouchableOpacity style={styles.closeButton} onPress={() => setErrorMessage('')}>
+      <Ionicons name="close" size={24} color="black" />
+      <Text style={styles.modalButtonText}>Close</Text>
+    </TouchableOpacity>
+  </View>
+</Modal>
+
+
+    {/* Time Picker */}
+    <Picker
+  selectedValue={selectedTime}
+  style={styles.edittimePicker}
+  onValueChange={(itemValue) => setSelectedTime(itemValue)}
+>
+  {Array.from({ length: 120 }, (_, i) => (
+    <Picker.Item
+      key={i}
+      label={`${(i + 1)} ${i + 1 === 1 ? 'minute' : 'minutes'}`}  // Adjusted label based on the condition
+      value={(i + 1)}
+    />
+  ))}
+</Picker>
+
+    {/* Save and Close buttons */}
+    <View style={styles.modalButtonsContainer}>
+      <TouchableOpacity style={styles.modalButton} onPress={saveEdit}>
+        <Ionicons name="save" size={24} color="green" />
+        <Text style={{}}>Save</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.modalButton} onPress={() => setIsModalVisible(false)}>
+        <Ionicons name="close" size={24} color="black" />
+        <Text style={styles.modalButtonText}>Close</Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* DELETE button */}
+<TouchableOpacity style={styles.saveButton} onPress={deleteMove}>
+  <Ionicons name="trash-outline" size={24} color="red" />
+  <Text style={{ color: 'red', marginLeft: -20 }}>Delete</Text>
+</TouchableOpacity>
+  </View>
+</Modal>
     </SafeAreaView>
   );
 };
@@ -390,29 +479,55 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'white',
   },
+  playlistHeader: {
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  
+  playlistHeaderText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
   modalContainer: {
     backgroundColor: 'white',
     flexDirection: 'row',
     justifyContent: 'center',
-    padding: -25,  // Increase padding to add more space
-    marginBottom: -10,  // Increase marginBottom to add more space
+    padding: 25,  // Increase padding for better spacing
+    marginBottom: 10,  // Increase marginBottom for better spacing
   },
+
+  // Updated style for the buttons in the modal
   modalButton: {
-    margin: 10,
+    marginVertical: 50,  // Adjusted to vertical spacing
   },
+
+  // Updated style for the edit button
   editButton: {
     backgroundColor: 'lightblue',
-    padding: 10,
+    paddingVertical: 10,  // Adjusted to vertical padding
+    paddingHorizontal: 20,  // Adjusted to horizontal padding
     borderRadius: 5,
     alignItems: 'center',
   },
+
+  // Updated style for the edit button text
   editButtonText: {
     color: 'black',
     fontSize: 16,
   },
+
+  // Updated style for the close button
   closeButton: {
-    margin: 10,
+    marginVertical: 20,  // Adjusted to vertical spacing
   },
+  errorText: {
+    fontSize: 18,
+    color: 'red',
+    marginBottom: 20,
+  },  
 });
 
 export default MoveScreen;

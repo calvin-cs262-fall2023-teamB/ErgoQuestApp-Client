@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 //import BLEScanner from './BLEScanner';
 //import * as Location from 'expo-location';
 
-export default function SettingsModal({ isVisible, onClose }) {
+export default function SettingsModal({ isVisible, onClose, route }) {
   // State to track whether Bluetooth permissions have been requested
   /*
   const [bluetoothPermissionRequested, setBluetoothPermissionRequested] = useState(false);
@@ -36,37 +36,57 @@ export default function SettingsModal({ isVisible, onClose }) {
     }
   }, []);
   */
-
+  const userData = route?.params?.userData || null;
   const navigation = useNavigation(); // Get the navigation object
-  
-    const handleRemovePage = () => {
-      navigation.pop(); // This will remove the "Settings Page" from the stack.
-    };
-  
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, marginTop: 20 }}>
-          <View style={{ position: 'absolute', top: -10, right: 20 }}>
-            <TouchableOpacity onPress={handleRemovePage}>
-              <View style={{ backgroundColor: 'red', borderRadius: 20, padding: 10 }}>
-                <Ionicons name="ios-close" size={30} color="white" />
-              </View>
-            </TouchableOpacity>
-          </View>
-          <View style={{ position: 'absolute', top: 0, left: 120 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Settings Page</Text>
-          </View>
+
+  const showAccountInfo = () => {
+    if (global.userData) {
+      // If userData is available, show an alert with the user's information
+      alert(`Name: ${global.userData.name}\nEmail: ${global.userData.email}`);
+    } else {
+      // If userData is not available, show a different message
+      alert("Not logged in.");
+    }
+  };
+
+  const handleRemovePage = () => {
+    navigation.pop(); // This will remove the "Settings Page" from the stack.
+  };
+
+  const navigateToLogin = () => {
+    //setIsSettingsVisible(false); // Close the modal
+    navigation.navigate('Login'); // Navigate
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, marginTop: 20 }}>
+        <View style={{ position: 'absolute', top: -10, right: 20 }}>
+          <TouchableOpacity onPress={handleRemovePage}>
+            <View style={{ backgroundColor: 'red', borderRadius: 20, padding: 10 }}>
+              <Ionicons name="ios-close" size={30} color="white" />
+            </View>
+          </TouchableOpacity>
         </View>
-        <View style={{ position: 'absolute', top: 200, left: 55 }}>
-            <TouchableOpacity onPress={() => alert("Bluetooth button pressed")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
-              <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Connect Bluetooth Chair</Text>
-            </TouchableOpacity>
-            </View>
-        <View style={{ position: 'absolute', top: 300, left: 150 }}>
-            <TouchableOpacity onPress={() => alert("Account Information")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
-              <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Account</Text>
-            </TouchableOpacity>
-            </View>
-      </SafeAreaView>
-    );
-  }
+        <View style={{ position: 'absolute', top: 0, left: 120 }}>
+          <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Settings Page</Text>
+        </View>
+      </View>
+      <View style={{ position: 'absolute', top: 200, left: 55 }}>
+        <TouchableOpacity onPress={() => alert("Bluetooth button pressed")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Connect Bluetooth Chair</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ position: 'absolute', top: 300, left: 130 }}>
+        <TouchableOpacity onPress={showAccountInfo} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Account</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ position: 'absolute', top: 400, left: 150 }}>
+        <TouchableOpacity onPress={navigateToLogin} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Log In</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
