@@ -49,6 +49,16 @@ export default function SettingsModal({ isVisible, onClose, route }) {
     }
   };
 
+  const handleLogout = () => {
+    if (global.userData) {
+      alert(`User ${global.userData.name} logged out`);
+      global.userData = null;
+      global.moves = [{"id": 1, "name": "default value", "percent": 0}, {"id": 2, "name": "other actuator", "percent": 0}];
+    } else {
+      alert("Not logged in.");
+    }
+  }
+
   const handleRemovePage = () => {
     navigation.pop(); // This will remove the "Settings Page" from the stack.
   };
@@ -82,9 +92,14 @@ export default function SettingsModal({ isVisible, onClose, route }) {
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Account</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ position: 'absolute', top: 400, left: 150 }}>
+      <View style={{ position: 'absolute', top: 400, left: 145 }}>
         <TouchableOpacity onPress={navigateToLogin} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Log In</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ position: 'absolute', top: 500, left: 135 }}>
+        <TouchableOpacity onPress={handleLogout} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Log Out</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
