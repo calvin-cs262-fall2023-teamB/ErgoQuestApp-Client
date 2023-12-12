@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';  // useEffect added
-import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, TextInput, Alert } from 'react-native';
-import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useState, useEffect } from 'react';  // useEffect added
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, TextInput, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import { globalStyles } from '../styles/global';
-import { ScrollView } from 'react-native';
 import { FlatList } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /*
 Might be needed for saving actuator positions between sessions:
@@ -16,11 +11,8 @@ https://react-native-async-storage.github.io/async-storage/docs/api/
 else: always set to 0.
 */
 
-export default function MoveScreen() {
+export default function MoveScreen(  ) { // may need ( navigation ) for commented out functions
   //DECLARATIONS
-  const [name, setName] = useState('Default Name'); // Change 'Default Name' to any name you want as the initial value.
-  const [percent, setPercent] = useState(6);
-  const [isMenuModalVisible, setMenuModalVisible] = useState(false);
   const [isNameModalVisible, setNameModalVisible] = useState(false);
   const [isValueModalVisible, setValueModalVisible] = useState(false);
   const [inputName, setInputName] = useState('');
@@ -33,7 +25,6 @@ export default function MoveScreen() {
   const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
   const [updater, setUpdater] = useState(0); // for updating flat list on create
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
-
   const fetchData = async () => {
     try {
       console.log('Fetching data for user:', global.userData.id);
@@ -88,6 +79,7 @@ export default function MoveScreen() {
   }, [intervalId]);
     
   useFocusEffect(() => {
+    global.help = "Move";
     setMoves(global.moves);
     return () => {
       setMoves(global.moves);
@@ -166,11 +158,11 @@ export default function MoveScreen() {
   
       // Update actuator names in presets
       for (let i = 0; i < global.presets.length; i++) {
-        if (global.presets[i].actuatorValues[selectedMoveIndex].id === global.moves[selectedMoveIndex].id) {
+        if (global.presets[i].actuatorValues[selectedMoveIndex].id = global.moves[selectedMoveIndex].id) {
           global.presets[i].actuatorValues[selectedMoveIndex].name = inputName;
         } else {
           for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
-            if (global.presets[i].actuatorValues[j].id === global.moves[selectedMoveIndex].id) {
+            if (global.presets[i].actuatorValues[j].id = global.moves[selectedMoveIndex].id) {
               global.presets[i].actuatorValues[j].name = inputName;
               break;
             }
@@ -237,37 +229,24 @@ export default function MoveScreen() {
     }
   };
 
-  const toggleMenuSize = () => {
-    setIsMenuExpanded(!isMenuExpanded); // This toggles the expanded state
-  };
-
   const OptionModal = ({ isVisible, onClose, options }) => (
     <Modal isVisible={isVisible}>
       <View style={styles.modalContent}>
         {options.map(option => (
           <TouchableOpacity key={option.label} onPress={option.action}>
-            {/* Apply the style conditionally based on isMenuExpanded */}
-            <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+            <Text style={styles.optionText}>
               {option.label}
             </Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity onPress={onClose}>
-          <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+          <Text style={styles.optionText}>
             Close
           </Text>
         </TouchableOpacity>
       </View>
     </Modal>
   );
-
-  const handleMenuOption = (option) => {
-    if (option === 'name') {
-      setNameModalVisible(true);
-    } else if (option === 'value') {
-      setValueModalVisible(true);
-    }
-  };
 
   const menuOptions = [
     {
@@ -308,36 +287,27 @@ export default function MoveScreen() {
     }
   ];
 
-  const addNewMove = () => {
-    if (global.moves.length < 6) {
-      let minimumOpenID = 1; // find lowest open ID value
-      for (let i = 1; i < 7; i++) {
-        for (let j = 0; j < global.moves.length; j++) {
-          if (global.moves[j].id == i) { // compare with type conversion in case id is read as string
-            minimumOpenID = i + 1;
-            continue;
-          }
+  const createNewPreset = () => {
+    let largestIndex = 1;
+    for (let i = 0; i < global.presets.length; i++) {
+        if (global.presets[i].id > largestIndex) {
+            largestIndex = global.presets[i].id;
         }
-        if (minimumOpenID == i) {
-          break;
-        }
-      }
-      global.moves.push({ id: minimumOpenID, name: 'New Actuator', percent: 0 }); // did not refresh screen
-      global.moves[0].id = global.moves[0].id;
-      setMoves(global.moves);
-      setUpdater(updater + 1);
-      // update actuator count in presets
-      for (let i = 0; i < global.presets.length; i++) {
-        global.presets[i].actuatorValues.push({
-          id: minimumOpenID,
-          name: 'New Actuator',
-          percent: 0
-        });
-      }
-      // TODO: sync new preset settings to database
-    } else {
-      Alert.alert('Error', 'You can only add up to 6 moves!');
     }
+    const newID = largestIndex + 1;
+    const tempName = "Preset " + newID + "";
+    let newPresets = [];
+    for (let i = 0; i < global.presets.length; i++) {
+        newPresets.push(global.presets[i]);
+    }
+    newPresets.push({
+        name: tempName,
+        id: newID,
+        actuatorValues: global.moves,
+    });
+    global.presets = newPresets;
+    alert("Preset created successfully!");
+    // navigation.navigate("Presets");
   };
 
   const motorPositionExists = async (motorPositionId, userID) => {
@@ -459,32 +429,34 @@ export default function MoveScreen() {
       Alert.alert('Error', 'Failed to update motor name!');
     }
   };
-  
 
   const renderMove = ({ item, index }) => (
     <View style={styles.frame}>
-      <View style={styles.header}>
+      {/* TouchableOpacity wraps the entire upper part */}
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => {
+          setSelectedMoveIndex(index); // Set the index for the selected move
+          setMenuVisible(true); // Open the modal
+        }}
+      >
         <Text style={styles.percentText}>{item.percent}%</Text>
         <Text style={styles.nameText}>{item.name}</Text>
-        <TouchableOpacity onPress={() => {
-          setSelectedMoveIndex(index); // Update the selected move index
-          setMenuVisible(!menuVisible);
-        }}>
-          <Ionicons name="ellipsis-vertical" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
+        <Ionicons name="ellipsis-vertical" size={24} color="black" />
+      </TouchableOpacity>
+  
       <View style={styles.buttons}>
         <TouchableOpacity
           style={styles.button}
-          onPressIn={() => startDecreasing(index)}  // Pass the index here
+          onPressIn={() => startDecreasing(index)}
           onPressOut={stopChange}
         >
           <Text style={styles.buttonText}>-</Text>
         </TouchableOpacity>
-
+  
         <TouchableOpacity
           style={styles.button}
-          onPressIn={() => startIncreasing(index)}  // Pass the index here
+          onPressIn={() => startIncreasing(index)}
           onPressOut={stopChange}
         >
           <Text style={styles.buttonText}>+</Text>
@@ -538,16 +510,15 @@ export default function MoveScreen() {
         data={moves}
         scrollEnabled={true}
         style={{ maxWidth: "100%" }} // fixes horizontal scroll issue
-        extraData={updater} // allows for immediate re-render when adding new moves; otherwise, re-rendered upon screen movement
         renderItem={renderMove}   // Use the renderMove function here
         keyExtractor={(item, index) => index.toString()}
         ItemSeparatorComponent={Separator} />
 
       <TouchableOpacity
         style={styles.addMoveButton}
-        onPress={addNewMove}
+        onPress={createNewPreset}
       >
-        <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
+        <Text style={styles.addMoveButtonText}>Create New Preset</Text>
       </TouchableOpacity>
 
       <OptionModal
@@ -565,12 +536,12 @@ export default function MoveScreen() {
             placeholder="Enter new name"
           />
          <TouchableOpacity onPress={handleNameChange}>
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+      <Text style={styles.optionText}>
         Confirm
       </Text>
     </TouchableOpacity>
     <TouchableOpacity onPress={() => setNameModalVisible(false)}>
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+      <Text style={styles.optionText}>
         Close
       </Text>
     </TouchableOpacity>
@@ -587,14 +558,12 @@ export default function MoveScreen() {
       keyboardType="numeric"
     />
     <TouchableOpacity onPress={handlePercentChange}>
-      {/* Apply the style conditionally based on isMenuExpanded */}
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+      <Text style={styles.optionText}>
         Confirm
       </Text>
     </TouchableOpacity>
     <TouchableOpacity onPress={() => setValueModalVisible(false)}>
-      {/* Apply the style conditionally based on isMenuExpanded */}
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+      <Text style={styles.optionText}>
         Close
       </Text>
     </TouchableOpacity>
@@ -637,7 +606,7 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '70%', // adjusted for bigger buttons
+    width: '80%', // adjusted for bigger buttons
     marginBottom: 20,
   },
   button: {
@@ -660,7 +629,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    padding: 20,
+    padding: 75,
     borderRadius: 10,
     alignItems: 'center',
   },
@@ -671,9 +640,9 @@ const styles = StyleSheet.create({
   },
 
   addMoveButton: {
-    marginTop: 'auto',  // pushes the button to the bottom of the available space
-    marginBottom: 40,   // adds some space at the bottom for aesthetics
-    width: '70%',
+    marginTop: 15,  // pushes the button to the bottom of the available space
+    marginBottom: 25,   // adds some space at the bottom for aesthetics
+    width: '88%',
     height: 60,
     justifyContent: 'center',
     alignItems: 'center',
@@ -682,20 +651,23 @@ const styles = StyleSheet.create({
   },
 
   addMoveButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'black',
-
-
-
+    alignContent: "center",
+    textAlign: "center",
+    justifyContent: "center",
+    fontSize: 24,
+    padding: "5%",
+    width: "100%",
+    height: "100%",
   },
 
   optionText: {
-    fontSize: 18, 
+    fontSize: 26,
+    marginVertical: 8, 
   },
 
   optionTextExpanded: {
-    fontSize: 24, 
+    fontSize: 26, 
+    marginVertical: 10,
   },
 
 

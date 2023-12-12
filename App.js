@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { View, Image, TouchableOpacity, SafeAreaView } from 'react-native';
 import { NavigationContainer} from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Modal from 'react-native-modal';
+//import Modal from 'react-native-modal';
 import { globalStyles } from './styles/global';
 import MoveScreen from './screens/Move';
 import PresetsScreen from './screens/Presets';
@@ -16,18 +16,22 @@ import CreateAccountScreen from './screens/createAccountScreen';
 
 import './screens/global';
 
-const { width, height } = Dimensions.get('window');
+//const { width, height } = Dimensions.get('window');
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
 
+
 function HomeScreen({ navigation }) {
-  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  //const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isHelpVisible, setIsHelpVisible] = useState(false);
 
+  /*
   const toggleSettingsVisible = () => {
     setIsSettingsVisible(!isSettingsVisible);
   };
+  */
+
   const toggleHelpVisible = () => {
     setIsHelpVisible(!isHelpVisible);
   };

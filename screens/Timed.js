@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   SafeAreaView,
-  Dimensions,
   StyleSheet,
   TextInput,
   ScrollView,
@@ -14,7 +13,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
 
-const { width, height } = Dimensions.get('window');
 
 const MoveScreen = () => {
   const [moveList, setMoveList] = useState([{ presetID: 1, time: 30 }]);
@@ -67,6 +65,7 @@ const MoveScreen = () => {
   
 
   useFocusEffect(() => {
+    global.help = "Timed";
     if (global.times.length !== moveList.length) {
       setMoveList(JSON.parse(JSON.stringify(global.times)));
       setIsPlaying(false);
@@ -83,12 +82,15 @@ const MoveScreen = () => {
       setCountdown(nextMove.time * 60);
       setIsPlaying(true);
       const presetName = getNameFromID(nextMove.presetID);
+
+      // Update global.moves based on the selected preset
+      updateMovesForPreset(nextMove.presetID);
+
       console.log(`Starting Preset: ${presetName}`);
     } else {
       setIsPlaying(false);
     }
   };
-  
 
   const startTimer = () => {
     if (!isPlaying && moveList.length > 0) {
@@ -96,19 +98,21 @@ const MoveScreen = () => {
       const timeInSeconds = countdown > 0 ? countdown : topMove.time * 60;
       setCountdown(timeInSeconds);
       setIsPlaying(true);
-  
+
       // Log the starting preset for the first move
       const presetName = getNameFromID(topMove.presetID);
+
+      // Update global.moves based on the selected preset
+      updateMovesForPreset(topMove.presetID);
+
       console.log(`Starting Preset: ${presetName}`);
     } else {
       setIsPlaying(false);
     }
   };
-  
 
-  const pauseTimer = () => {
-    setIsPlaying(false);
-  };
+
+ 
 
   const stopTimer = () => {
     setIsPlaying(false);
@@ -132,14 +136,8 @@ const MoveScreen = () => {
     setSelectedTime('5'); // Reset selectedTime to a default value (modify if needed)
   };
 
-  const clearMoves = () => {
-    setMoveList([]);
-    global.times = [];
-  };
 
-  const editMove = (index) => {
-    setCurrentMoveIndex(index);
-    setSelectedPreset(-1);
+  const editMove = () => {
     setIsModalVisible(true);
   };
 
@@ -225,6 +223,22 @@ const MoveScreen = () => {
     return timeParts.join(' ');
   };
 
+  // Function to update global.moves based on the selected preset
+  const updateMovesForPreset = (presetID) => {
+    const preset = global.presets.find((p) => p.id === presetID);
+
+    if (preset) {
+      global.moves = preset.actuatorValues.map((actuator) => ({
+        id: actuator.id,
+        name: actuator.name,
+        percent: actuator.percent,
+      }));
+    } else {
+      console.error(`Preset with ID ${presetID} not found`);
+    }
+  };
+
+  
   return (
     <SafeAreaView style={styles.container}>
 
