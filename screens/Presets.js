@@ -210,44 +210,54 @@ export default function PresetsScreen({ props, navigation }) {
     };
 
     // display
-    return (
-        <View style={styles.container}>
-            {/* Presets listed */}
-            <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} renderItem={({ item }) => (
-                <View style={[styles.preset]}>
-                <Pressable
-                  onPress={() => activate(item.id)}
-                  onLongPress={() => startRename(item.id)}
-                  style={[styles.presetButton, styles.presetButtonLeft]}
-                >
-                  <Text style={[styles.presetButtonText]} >{item.name}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => openPresetOptions(item.id)}
-                  onLongPress={() => openPresetOptions(item.id)}
-                  style={[styles.presetButton, styles.presetButtonRight]}
-                >
-                  <View style={styles.iconWrapper}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color="black" />
-                  </View>
-                </Pressable>
-              </View>
+   return (
+  <View style={styles.container}>
+    {/* Presets listed */}
+    <FlatList
+      scrollEnabled={true}
+      contentContainerStyle={{ paddingBottom: 20 }} // Adds padding at the bottom of the list
+      style={styles.pageArea}
+      data={global.presets}
+      renderItem={({ item }) => (
+        <View style={[styles.preset]}>
+          <TouchableOpacity
+            onPress={() => activate(item.id)}
+            onLongPress={() => startRename(item.id)}
+            style={[styles.presetButton, styles.presetButtonLeft]}
+          >
+            <Text style={[styles.presetButtonText]}>{item.name}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => openPresetOptions(item.id)}
+            onLongPress={() => openPresetOptions(item.id)}
+            style={[styles.presetButton, styles.presetButtonRight]}
+          >
+            <View style={styles.iconWrapper}>
+              <Ionicons name="ellipsis-horizontal" size={24} color="black" />
+            </View>
+          </TouchableOpacity>
+        </View>
             )} >
             </FlatList>
 
             {/* "Add Preset" button at bottom of screen */}
             <View style={[styles.pageArea, styles.pageBottom]}>
-                <Pressable
-                    onPress={onCreateLongPress}
-                    onLongPress={onCreateLongPress}
-                    style={[styles.addButton, (updating >= 0) ? styles.hide : styles.show]}
-                >
-                    {({ pressed }) => (
-                        <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
-                            Create New Preset
-                        </Text>
-                    )}
-                </Pressable>
+            <Pressable
+                onPress={onCreateLongPress}
+                onLongPress={onCreateLongPress}
+                style={({ pressed }) => [
+                    styles.addButton,
+                    {
+                        backgroundColor: pressed ? 'lightgray' : 'white',
+                        borderRadius: 15, 
+                    },
+                    (updating >= 0) ? styles.hide : styles.show
+                ]}
+            >
+        <Text style={styles.buttonText}>
+            Create New Preset
+        </Text>
+    </Pressable>
                 {/* Update preset */}
                 <Pressable
                     onPress={finishUpdating}
@@ -352,7 +362,7 @@ const styles = StyleSheet.create({
         justifyContent: "flex-start",
         backgroundColor: "#ffffff",
         scrollEnabled: true,
-        borderRadius: 10
+        borderRadius: 15
     },
     presetButton: {
         flex: 1,
@@ -390,11 +400,14 @@ const styles = StyleSheet.create({
         
     },
     addButton: {
-        width: "100%",
-        height: "100%",
-        borderRadius: 20,
-        
+        width: "100%", 
+        height: 70, 
+        backgroundColor: 'white', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+       
     },
+
     buttonText: {
         alignContent: "center",
         textAlign: "center",
@@ -420,4 +433,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
       },
       
+      pageArea: {
+        width: "88%",
+        marginBottom: 40, // Adjust this value to increase the space at the bottom
+        marginLeft: "1%",
+        marginRight: "1%",
+        borderRadius: 10,
+        marginTop: "8%",
+      },
 });

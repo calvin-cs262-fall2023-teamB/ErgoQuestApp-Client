@@ -166,28 +166,28 @@ export default function MoveScreen() {
         setValueModalVisible(true);
       }
     },
-    // Add the "Remove Move" option
-    {
-      label: 'Remove Move',
-      action: () => {
-        Alert.alert(
-          'Remove Move',
-          'Are you sure you want to remove this move?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'OK',
-              onPress: () => removeMove(selectedMoveIndex),
-            },
-          ],
-          { cancelable: false }
-        );
-        setMenuVisible(false); // Close the options modal
-      }
-    }
+    // // Add the "Remove Move" option
+    // {
+    //   label: 'Remove Move',
+    //   action: () => {
+    //     Alert.alert(
+    //       'Remove Move',
+    //       'Are you sure you want to remove this move?',
+    //       [
+    //         {
+    //           text: 'Cancel',
+    //           style: 'cancel',
+    //         },
+    //         {
+    //           text: 'OK',
+    //           onPress: () => removeMove(selectedMoveIndex),
+    //         },
+    //       ],
+    //       { cancelable: false }
+    //     );
+    //     setMenuVisible(false); // Close the options modal
+    //   }
+    // }
   ];
 
   const addNewMove = () => {
@@ -224,28 +224,31 @@ export default function MoveScreen() {
 
   const renderMove = ({ item, index }) => (
     <View style={styles.frame}>
-      <View style={styles.header}>
+      {/* TouchableOpacity wraps the entire upper part */}
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => {
+          setSelectedMoveIndex(index); // Set the index for the selected move
+          setMenuVisible(true); // Open the modal
+        }}
+      >
         <Text style={styles.percentText}>{item.percent}%</Text>
         <Text style={styles.nameText}>{item.name}</Text>
-        <TouchableOpacity onPress={() => {
-          setSelectedMoveIndex(index); // Update the selected move index
-          setMenuVisible(!menuVisible);
-        }}>
-          <Ionicons name="ellipsis-vertical" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
+        <Ionicons name="ellipsis-vertical" size={24} color="black" />
+      </TouchableOpacity>
+  
       <View style={styles.buttons}>
         <TouchableOpacity
           style={styles.button}
-          onPressIn={() => startDecreasing(index)}  // Pass the index here
+          onPressIn={() => startDecreasing(index)}
           onPressOut={stopChange}
         >
           <Text style={styles.buttonText}>-</Text>
         </TouchableOpacity>
-
+  
         <TouchableOpacity
           style={styles.button}
-          onPressIn={() => startIncreasing(index)}  // Pass the index here
+          onPressIn={() => startIncreasing(index)}
           onPressOut={stopChange}
         >
           <Text style={styles.buttonText}>+</Text>
@@ -260,11 +263,11 @@ export default function MoveScreen() {
     );
   }
 
-  const removeMove = (index) => {
-    global.moves = (global.moves.filter((_, i) => i !== index));
-    setMoves(global.moves);
-    setMenuVisible(false); // Close the menu after removing the move
-  };
+  // const removeMove = (index) => {
+  //   global.moves = (global.moves.filter((_, i) => i !== index));
+  //   setMoves(global.moves);
+  //   setMenuVisible(false); // Close the menu after removing the move
+  // };
 
 
 
@@ -280,12 +283,12 @@ export default function MoveScreen() {
         keyExtractor={(item, index) => index.toString()}
         ItemSeparatorComponent={Separator} />
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.addMoveButton}
         onPress={addNewMove}
       >
         <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       <OptionModal
         isVisible={menuVisible}
@@ -374,7 +377,7 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '70%', // adjusted for bigger buttons
+    width: '80%', // adjusted for bigger buttons
     marginBottom: 20,
   },
   button: {
@@ -397,7 +400,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    padding: 20,
+    padding: 75,
     borderRadius: 10,
     alignItems: 'center',
   },
@@ -428,11 +431,13 @@ const styles = StyleSheet.create({
   },
 
   optionText: {
-    fontSize: 18, 
+    fontSize: 26,
+    marginVertical: 8, 
   },
 
   optionTextExpanded: {
-    fontSize: 24, 
+    fontSize: 26, 
+    marginVertical: 10,
   },
 
 
