@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
-import Modal from 'react-native-modal';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, FlatList } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Dialog from "react-native-dialog";
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
 
 import { globalStyles } from '../styles/global';
 
@@ -14,8 +13,9 @@ or
 https://react.dev/reference/react/createContext -NO: cannot produce and consume in same component
 */
 
-export default function PresetsScreen({ props, navigation }) {
+export default function PresetsScreen({ navigation }) {
     // hooks
+    const [presets, setPresets] = useState([]); // for screen refresh purposes only
     const [renameVisible, setRenameVisible] = useState(false);
     const [createVisible, setCreateVisible] = useState(false);
     const [deleteVisible, setDeleteVisible] = useState(false);
@@ -28,18 +28,15 @@ export default function PresetsScreen({ props, navigation }) {
     let tempName;
 
     // screen refresh
-    // useFocusEffect(() => {
-    //     // highlight current selected preset?
-    //     return () => {
-
-    //     }
-    //   });
+    useFocusEffect(() => {
+        global.help = "Presets";
+        setPresets(global.presets);
+        return () => {
+            setPresets(global.presets);
+        }
+    });
 
     // functions
-    const onCreatePress = () => {
-        // console.log('Create Preset Button Tapped');
-        setCreateVisible(createVisible ? false : true);
-    };
 
     const onCreateLongPress = () => {
         // console.log('Create Preset Button Held');
@@ -213,7 +210,7 @@ export default function PresetsScreen({ props, navigation }) {
     return (
         <View style={styles.container}>
             {/* Presets listed */}
-            <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} renderItem={({ item }) => (
+            <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} extraData={presets} renderItem={({ item }) => (
                 <View style={[styles.preset]}>
                 <Pressable
                   onPress={() => activate(item.id)}
@@ -351,8 +348,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "flex-start",
         backgroundColor: "#ffffff",
-        scrollEnabled: true,
-        borderRadius: 10
+        scrollEnabled: true
     },
     presetButton: {
         flex: 1,

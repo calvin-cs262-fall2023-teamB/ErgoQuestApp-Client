@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';  // useEffect added
-import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, TextInput, Alert } from 'react-native';
-import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useState, useEffect } from 'react';  // useEffect added
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, TextInput, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import { globalStyles } from '../styles/global';
-import { ScrollView } from 'react-native';
 import { FlatList } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /*
 Might be needed for saving actuator positions between sessions:
@@ -16,7 +11,7 @@ https://react-native-async-storage.github.io/async-storage/docs/api/
 else: always set to 0.
 */
 
-export default function MoveScreen() {
+export default function MoveScreen( navigation ) {
   //DECLARATIONS
   const [name, setName] = useState('Default Name'); // Change 'Default Name' to any name you want as the initial value.
   const [percent, setPercent] = useState(6);
@@ -43,6 +38,7 @@ export default function MoveScreen() {
   }, [intervalId]);
 
   useFocusEffect(() => {
+    global.help = "Move";
     setMoves(global.moves);
     return () => {
       setMoves(global.moves);
@@ -165,28 +161,6 @@ export default function MoveScreen() {
         setMenuVisible(false); // Close the options modal
         setValueModalVisible(true);
       }
-    },
-    // Add the "Remove Move" option
-    {
-      label: 'Remove Move',
-      action: () => {
-        Alert.alert(
-          'Remove Move',
-          'Are you sure you want to remove this move?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'OK',
-              onPress: () => removeMove(selectedMoveIndex),
-            },
-          ],
-          { cancelable: false }
-        );
-        setMenuVisible(false); // Close the options modal
-      }
     }
   ];
 
@@ -220,6 +194,28 @@ export default function MoveScreen() {
     } else {
       Alert.alert('Error', 'You can only add up to 6 moves!');
     }
+  };
+
+  const createNewPreset = () => {
+    let largestIndex = 1;
+    for (let i = 0; i < global.presets.length; i++) {
+        if (global.presets[i].id > largestIndex) {
+            largestIndex = global.presets[i].id;
+        }
+    }
+    const newID = largestIndex + 1;
+    const tempName = "Preset " + newID + "";
+    let newPresets = [];
+    for (let i = 0; i < global.presets.length; i++) {
+        newPresets.push(global.presets[i]);
+    }
+    newPresets.push({
+        name: tempName,
+        id: newID,
+        actuatorValues: global.moves,
+    });
+    global.presets = newPresets;
+    // navigation.navigate("Presets");
   };
 
   const renderMove = ({ item, index }) => (
@@ -282,9 +278,9 @@ export default function MoveScreen() {
 
       <TouchableOpacity
         style={styles.addMoveButton}
-        onPress={addNewMove}
+        onPress={createNewPreset}
       >
-        <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
+        <Text style={styles.addMoveButtonText}>Create New Preset</Text>
       </TouchableOpacity>
 
       <OptionModal
