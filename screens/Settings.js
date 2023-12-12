@@ -80,7 +80,7 @@ export default function SettingsModal({ isVisible, onClose, route }) {
             if (j < curr){
               newValues.push(global.presets[i].actuatorValues[j])
             } else {
-              newValues.push({"id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0});
+              newValues.push({"id": (j + 1), "name": ("Actuator " + (j + 1) + ""), "percent": 0});
             }
           }
           global.presets[i].actuatorValues = newValues;
