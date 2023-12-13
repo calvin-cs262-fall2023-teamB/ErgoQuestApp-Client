@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
-import Modal from 'react-native-modal';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, FlatList, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Dialog from "react-native-dialog";
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
 
 import { globalStyles } from '../styles/global';
 
@@ -14,8 +13,9 @@ or
 https://react.dev/reference/react/createContext -NO: cannot produce and consume in same component
 */
 
-export default function PresetsScreen({ props, navigation }) {
+export default function PresetsScreen({ navigation }) {
     // hooks
+    const [presets, setPresets] = useState([]); // for screen refresh purposes only
     const [renameVisible, setRenameVisible] = useState(false);
     const [createVisible, setCreateVisible] = useState(false);
     const [deleteVisible, setDeleteVisible] = useState(false);
@@ -28,18 +28,15 @@ export default function PresetsScreen({ props, navigation }) {
     let tempName;
 
     // screen refresh
-    // useFocusEffect(() => {
-    //     // highlight current selected preset?
-    //     return () => {
-
-    //     }
-    //   });
+    useFocusEffect(() => {
+        global.help = "Presets";
+        setPresets(global.presets);
+        return () => {
+            setPresets(global.presets);
+        }
+    });
 
     // functions
-    const onCreatePress = () => {
-        // console.log('Create Preset Button Tapped');
-        setCreateVisible(createVisible ? false : true);
-    };
 
     const onCreateLongPress = () => {
         // console.log('Create Preset Button Held');
@@ -210,56 +207,72 @@ export default function PresetsScreen({ props, navigation }) {
     };
 
     // display
-    return (
-        <View style={styles.container}>
-            {/* Presets listed */}
-            <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} renderItem={({ item }) => (
-                <View style={[styles.preset]}>
-                <Pressable
-                  onPress={() => activate(item.id)}
-                  onLongPress={() => startRename(item.id)}
-                  style={[styles.presetButton, styles.presetButtonLeft]}
-                >
-                  <Text style={[styles.presetButtonText]} >{item.name}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => openPresetOptions(item.id)}
-                  onLongPress={() => openPresetOptions(item.id)}
-                  style={[styles.presetButton, styles.presetButtonRight]}
-                >
-                  <View style={styles.iconWrapper}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color="black" />
-                  </View>
-                </Pressable>
-              </View>
-            )} >
-            </FlatList>
-
-            {/* "Add Preset" button at bottom of screen */}
-            <View style={[styles.pageArea, styles.pageBottom]}>
-                <Pressable
-                    onPress={onCreateLongPress}
-                    onLongPress={onCreateLongPress}
-                    style={[styles.addButton, (updating >= 0) ? styles.hide : styles.show]}
-                >
-                    {({ pressed }) => (
-                        <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
-                            Create New Preset
-                        </Text>
-                    )}
-                </Pressable>
-                {/* Update preset */}
-                <Pressable
-                    onPress={finishUpdating}
-                    style={[styles.addButton, (updating < 0) ? styles.hide : styles.show]}
-                >
-                    {({ pressed }) => (
-                        <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
-                            Save over {updating >= 0 ? global.presets[updating].name : "Selected Preset"}?
-                        </Text>
-                    )}
-                </Pressable>
+   return (
+  <View style={styles.container}>
+    {/* Presets listed */}
+    <FlatList
+      scrollEnabled={true}
+      contentContainerStyle={{ paddingBottom: 20 }} // Adds padding at the bottom of the list
+      style={styles.pageArea}
+      data={global.presets}
+      extraData={presets} // to help screen refresh when changes made in Move screen
+      renderItem={({ item }) => (
+        <View style={[styles.preset]}>
+          <TouchableOpacity
+            onPress={() => activate(item.id)}
+            onLongPress={() => startRename(item.id)}
+            style={[styles.presetButton, styles.presetButtonLeft]}
+          >
+            <Text style={[styles.presetButtonText]}>{item.name}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => openPresetOptions(item.id)}
+            onLongPress={() => openPresetOptions(item.id)}
+            style={[styles.presetButton, styles.presetButtonRight]}
+          >
+            <View style={styles.iconWrapper}>
+              <Ionicons name="ellipsis-horizontal" size={24} color="black" />
             </View>
+          </TouchableOpacity>
+        </View>
+            )} >
+    </FlatList>
+
+    {/* "Add Preset" button at bottom of screen */}
+    <View style={[styles.pageArea, styles.pageBottom]}>
+        <Pressable
+            onPress={onCreateLongPress}
+            onLongPress={onCreateLongPress}
+            style={({ pressed }) => [
+                styles.addButton,
+                {
+                    backgroundColor: pressed ? 'lightgray' : 'white',
+                    borderRadius: 15, 
+                },
+                (updating >= 0) ? styles.hide : styles.show
+            ]}
+        >
+            <Text style={styles.buttonText}>
+                Create New Preset
+            </Text>
+        </Pressable>
+        {/* Update preset */}
+        <Pressable
+            onPress={finishUpdating}
+            style={({ pressed }) => [
+                styles.addButton,
+                {
+                    backgroundColor: pressed ? 'lightgray' : 'white',
+                    borderRadius: 15, 
+                },
+                (updating < 0) ? styles.hide : styles.show
+            ]}
+        >
+            <Text style={styles.buttonText}>
+                Save over {updating >= 0 ? global.presets[updating].name : "Selected Preset"}?
+            </Text>
+        </Pressable>
+        </View>
             {/* Dialogs */}
             <View style={globalStyles.container}>
                 {/* RENAME */}
@@ -332,7 +345,7 @@ const styles = StyleSheet.create({
     // for area at the bottom of the screen
     pageArea: {
         width: "88%",
-        marginBottom: "20%",
+        marginBottom: 25, // Adjust this value to increase the space at the bottom
         marginLeft: "1%",
         marginRight: "1%",
         borderRadius: 10,
@@ -347,12 +360,11 @@ const styles = StyleSheet.create({
         borderStyle: "solid",
         borderColor: "#FFFFFF",
         borderWidth: "2",
-        borderRadius: 10,
+        borderRadius: 15, // old: 10
         flexDirection: "row",
         justifyContent: "flex-start",
         backgroundColor: "#ffffff",
-        scrollEnabled: true,
-        borderRadius: 10
+        scrollEnabled: true
     },
     presetButton: {
         flex: 1,
@@ -361,8 +373,6 @@ const styles = StyleSheet.create({
         flexBasis: "80%",
         alignItems: 'center',
         justifyContent: 'center',
-        
-        
     },
     presetButtonRight: {
         flexBasis: "20%",
@@ -371,30 +381,25 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderLeftWidth: 10,
         borderColor: "#FFFFFF"
-
-
-        
     },
     presetButtonText: {
         textAlign: "center",
         justifyContent: "center",
         fontSize: 24,
         padding: "2%",
-        textAlignVertical: 'center',
-        
-        
-        
+        textAlignVertical: 'center', 
     },
     pageBottom: {
         height: "10%",
-        
     },
     addButton: {
-        width: "100%",
-        height: "100%",
-        borderRadius: 20,
-        
+        width: "100%", 
+        height: 70, 
+        backgroundColor: 'white', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
     },
+
     buttonText: {
         alignContent: "center",
         textAlign: "center",
@@ -419,5 +424,4 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
       },
-      
 });
