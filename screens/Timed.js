@@ -15,7 +15,7 @@ import { Picker } from '@react-native-picker/picker';
 
 
 const MoveScreen = () => {
-  const [moveList, setMoveList] = useState([{ presetID: 1, time: 30 }]);
+  const [moveList, setMoveList] = useState([{ moveID: 1, presetID: 1, time: 30 }]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -25,6 +25,8 @@ const MoveScreen = () => {
   const [updater, setUpdater] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [startTime, setStartTime] = useState(null);
+  const [editedMove, setEditedMove] = useState(null);
+
 
   useEffect(() => {
     let interval;
@@ -135,9 +137,17 @@ const MoveScreen = () => {
     setSelectedTime('5'); // Reset selectedTime to a default value (modify if needed)
   };
 
-
-  const editMove = () => {
+  const editMove = (index) => {
+    setCurrentMoveIndex(index);
     setIsModalVisible(true);
+
+    // Retrieve the preset and time of the move being edited
+    const moveToEdit = moveList[index];
+    setSelectedPreset(moveToEdit.presetID);
+    setSelectedTime(moveToEdit.time.toString());
+
+    // Set the currently edited move
+    setEditedMove(moveToEdit);
   };
 
   const moveMoveDown = (index) => {
@@ -178,16 +188,21 @@ const MoveScreen = () => {
     setIsModalVisible(false);
   };
 
+
   const saveEdit = () => {
     const updatedMoveList = [...moveList];
     if (selectedPreset && selectedPreset >= 0) {
       updatedMoveList[currentMoveIndex].presetID = selectedPreset;
     }
     updatedMoveList[currentMoveIndex].time = selectedTime;
+
     setMoveList(updatedMoveList);
     global.times = JSON.parse(JSON.stringify(updatedMoveList));
     setIsModalVisible(false);
     setUpdater(updater + 1);
+
+    // Move the highlight to the top without modifying the list
+    setCurrentMoveIndex(0);
   };
 
   const getNameFromID = (id) => {
@@ -240,32 +255,29 @@ const MoveScreen = () => {
   
   return (
     <SafeAreaView style={styles.container}>
-
       {/* Display of Cuelist */}
-      <ScrollView style={styles.middle}
-        extraData={updater} // allows for immediate re-render when adding new times; otherwise, re-rendered upon screen movement
-      >
-          {/* "PLAYLISTS" text at the top */}
-   <View style={styles.playlistHeader}>
-    <Text style={styles.playlistHeaderText}>PLAYLISTS</Text>
-    </View>
+      <ScrollView style={styles.middle} extraData={updater}>
+        {/* "PLAYLISTS" text at the top */}
+        <View style={styles.playlistHeader}>
+          <Text style={styles.playlistHeaderText}>PLAYLISTS</Text>
+        </View>
         {moveList.map((move, index) => (
-          <View
-            style={[styles.presetContainer, index === currentMoveIndex && styles.currentMove]}
-            key={index}
-          >
-            <TextInput
-              style={styles.presetText}
-              value={getNameFromID(move.presetID)}
-            />
-            <TextInput
-              style={styles.timeText}
-              value={move.time.toString() + " minutes"}
-            />
-            <TouchableOpacity style={styles.editButton} onPress={() => editMove(index)}>
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-          </View>
+        <View
+          style={[styles.presetContainer, index === 0 && styles.currentMove]}
+          key={index}
+        >
+          <TextInput
+            style={styles.presetText}
+            value={getNameFromID(move.presetID)}
+          />
+          <TextInput
+            style={styles.timeText}
+            value={move.time.toString() + " minutes"}
+          />
+          <TouchableOpacity style={styles.editButton} onPress={() => editMove(index)}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+        </View>
         ))}
         {/* Add New Move controls */}
         <View style={styles.newMoveContainer}>
@@ -292,7 +304,7 @@ const MoveScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
+  
       {/* Display timer controls */}
       <View style={styles.bottom}>
         <View style={styles.buttonsContainer}>
@@ -311,10 +323,10 @@ const MoveScreen = () => {
           {countdown > 0 ? formatTime(countdown) : 'Timer stopped'}
         </Text>
       </View>
-
+  
       {/* Edit Move */}
       <Modal isVisible={isModalVisible}>
-  <View style={styles.modalContainer}>
+        <View style={styles.modalContainer}>
     {/* Move Up and Move Down buttons */}
     <View style={styles.modalButtonsContainer}>
       <TouchableOpacity style={styles.modalButton} onPress={() => moveMoveUp(currentMoveIndex)}>
