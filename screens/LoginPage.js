@@ -42,6 +42,8 @@ const LoginScreen = () => {
                     // navigation.navigate('Settings', {userData: user});
                     global.userData = user;
                     navigation.navigate('Settings');
+                    //global.moves = [];
+                    global.presets = [];
                 } else {
                     // User not found
                     Alert.alert('Login Failed', 'User not found or wrong credentials.');

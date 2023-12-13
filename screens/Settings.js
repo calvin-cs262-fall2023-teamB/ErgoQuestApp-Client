@@ -54,7 +54,23 @@ export default function SettingsModal({ isVisible, onClose, route }) {
     if (global.userData) {
       alert(`User ${global.userData.name} logged out`);
       global.userData = null;
-      global.moves = [{"id": 1, "name": "default value", "percent": 0}, {"id": 2, "name": "other actuator", "percent": 0}];
+      global.moves = [{ "id": 1, "name": "default value", "percent": 0 }, { "id": 2, "name": "other actuator", "percent": 0 }];
+      global.presets = [
+        {
+          "id": 1, "name": "Preset 1",
+          "actuatorValues": [
+            { "id": 1, "name": "default value", "percent": 0 },
+            { "id": 2, "name": "other actuator", "percent": 100 }
+          ]
+        },
+        {
+          "id": 2, "name": "Preset 2",
+          "actuatorValues": [
+            { "id": 1, "name": "default value", "percent": 50 },
+            { "id": 2, "name": "other actuator", "percent": 50 }
+          ]
+        }
+      ];
     } else {
       alert("Not logged in.");
     }
@@ -70,27 +86,27 @@ export default function SettingsModal({ isVisible, onClose, route }) {
   };
 
   const confirmActuatorCount = () => {
-    if (actuatorCount){
-      if (actuatorCount >= 1 && actuatorCount <= 7){
+    if (actuatorCount) {
+      if (actuatorCount >= 1 && actuatorCount <= 7) {
         const curr = global.moves.length;
         let newMoves = [];
         // set moves to proper length
         for (let i = 0; i < actuatorCount; i++) {
-          if (i < curr){
+          if (i < curr) {
             newMoves.push(global.moves[i])
           } else {
-            newMoves.push({"id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0});
+            newMoves.push({ "id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0 });
           }
         }
         global.moves = newMoves;
         // edit presets to right length
-        for (let i = 0; i < global.presets.length; i++){
+        for (let i = 0; i < global.presets.length; i++) {
           let newValues = [];
-          for (let j = 0; j < actuatorCount; j++){
-            if (j < curr){
+          for (let j = 0; j < actuatorCount; j++) {
+            if (j < curr) {
               newValues.push(global.presets[i].actuatorValues[j])
             } else {
-              newValues.push({"id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0});
+              newValues.push({ "id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0 });
             }
           }
           global.presets[i].actuatorValues = newValues;
@@ -126,12 +142,12 @@ export default function SettingsModal({ isVisible, onClose, route }) {
       </View>
       <View style={{ position: 'absolute', top: 300, left: 55 }}>
         <TextInput
-            keyboardType = 'numeric'
-            style={{ fontSize: 24, color: 'black', fontWeight: 'bold', borderRadius: 50, borderWidth: 2, borderColor: 'black', textAlign: "center" }}
-            value={actuatorCount}
-            onChangeText={setActuatorCount}
-            placeholder="Actuators (1-7)"
-          />
+          keyboardType='numeric'
+          style={{ fontSize: 24, color: 'black', fontWeight: 'bold', borderRadius: 50, borderWidth: 2, borderColor: 'black', textAlign: "center" }}
+          value={actuatorCount}
+          onChangeText={setActuatorCount}
+          placeholder="Actuators (1-7)"
+        />
         <TouchableOpacity onPress={confirmActuatorCount} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Set number of actuators</Text>
         </TouchableOpacity>
