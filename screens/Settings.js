@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, SafeAreaView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import { globalStyles } from '../styles/global';
 import { useNavigation } from '@react-navigation/native';
 
 //import BLEScanner from './BLEScanner';
@@ -36,8 +35,10 @@ export default function SettingsModal({ isVisible, onClose, route }) {
     }
   }, []);
   */
+
   const userData = route?.params?.userData || null;
   const navigation = useNavigation(); // Get the navigation object
+  const [actuatorCount, setActuatorCount] = useState(1);
 
   const showAccountInfo = () => {
     if (global.userData) {
@@ -49,6 +50,32 @@ export default function SettingsModal({ isVisible, onClose, route }) {
     }
   };
 
+  const handleLogout = () => {
+    if (global.userData) {
+      alert(`User ${global.userData.name} logged out`);
+      global.userData = null;
+      global.moves = [{ "id": 1, "name": "default value", "percent": 0 }, { "id": 2, "name": "other actuator", "percent": 0 }];
+      global.presets = [
+        {
+          "id": 1, "name": "Preset 1",
+          "actuatorValues": [
+            { "id": 1, "name": "default value", "percent": 0 },
+            { "id": 2, "name": "other actuator", "percent": 100 }
+          ]
+        },
+        {
+          "id": 2, "name": "Preset 2",
+          "actuatorValues": [
+            { "id": 1, "name": "default value", "percent": 50 },
+            { "id": 2, "name": "other actuator", "percent": 50 }
+          ]
+        }
+      ];
+    } else {
+      alert("Not logged in.");
+    }
+  }
+
   const handleRemovePage = () => {
     navigation.pop(); // This will remove the "Settings Page" from the stack.
   };
@@ -57,6 +84,41 @@ export default function SettingsModal({ isVisible, onClose, route }) {
     //setIsSettingsVisible(false); // Close the modal
     navigation.navigate('Login'); // Navigate
   };
+
+  const confirmActuatorCount = () => {
+    if (actuatorCount) {
+      if (actuatorCount >= 1 && actuatorCount <= 7) {
+        const curr = global.moves.length;
+        let newMoves = [];
+        // set moves to proper length
+        for (let i = 0; i < actuatorCount; i++) {
+          if (i < curr) {
+            newMoves.push(global.moves[i])
+          } else {
+            newMoves.push({ "id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0 });
+          }
+        }
+        global.moves = newMoves;
+        // edit presets to right length
+        for (let i = 0; i < global.presets.length; i++) {
+          let newValues = [];
+          for (let j = 0; j < actuatorCount; j++) {
+            if (j < curr) {
+              newValues.push(global.presets[i].actuatorValues[j])
+            } else {
+              newValues.push({ "id": (i + 1), "name": ("Actuator " + (i + 1) + ""), "percent": 0 });
+            }
+          }
+          global.presets[i].actuatorValues = newValues;
+        }
+        alert("Success!");
+      } else {
+        alert("Error, you must have between 1 and 7 actuators.");
+      }
+    } else {
+      alert("Error, cannot leave field blank.");
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
@@ -72,19 +134,38 @@ export default function SettingsModal({ isVisible, onClose, route }) {
           <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Settings Page</Text>
         </View>
       </View>
+      {/* Bluetooth */}
       <View style={{ position: 'absolute', top: 200, left: 55 }}>
         <TouchableOpacity onPress={() => alert("Bluetooth button pressed")} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Connect Bluetooth Chair</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ position: 'absolute', top: 300, left: 130 }}>
+      <View style={{ position: 'absolute', top: 300, left: 55 }}>
+        <TextInput
+          keyboardType='numeric'
+          style={{ fontSize: 24, color: 'black', fontWeight: 'bold', borderRadius: 50, borderWidth: 2, borderColor: 'black', textAlign: "center" }}
+          value={actuatorCount}
+          onChangeText={setActuatorCount}
+          placeholder="Actuators (1-7)"
+        />
+        <TouchableOpacity onPress={confirmActuatorCount} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Set number of actuators</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Account */}
+      <View style={{ position: 'absolute', top: 400, left: 130 }}>
         <TouchableOpacity onPress={showAccountInfo} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Account</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ position: 'absolute', top: 400, left: 150 }}>
+      <View style={{ position: 'absolute', top: 500, left: 150 }}>
         <TouchableOpacity onPress={navigateToLogin} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Log In</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ position: 'absolute', top: 600, left: 135 }}>
+        <TouchableOpacity onPress={handleLogout} style={{ backgroundColor: '#43B2D1', borderRadius: 20, padding: 10 }}>
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>Log Out</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

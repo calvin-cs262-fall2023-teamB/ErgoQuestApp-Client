@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';  // useEffect added
-import { View, Text, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, TextInput, Alert } from 'react-native';
-import { NavigationContainer, useFocusEffect } from '@react-navigation/native';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useState, useEffect } from 'react';  // useEffect added
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, TextInput, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
-import { globalStyles } from '../styles/global';
-import { ScrollView } from 'react-native';
 import { FlatList } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /*
 Might be needed for saving actuator positions between sessions:
@@ -16,11 +11,8 @@ https://react-native-async-storage.github.io/async-storage/docs/api/
 else: always set to 0.
 */
 
-export default function MoveScreen() {
+export default function MoveScreen() { // may need ( navigation ) for commented out functions
   //DECLARATIONS
-  const [name, setName] = useState('Default Name'); // Change 'Default Name' to any name you want as the initial value.
-  const [percent, setPercent] = useState(6);
-  const [isMenuModalVisible, setMenuModalVisible] = useState(false);
   const [isNameModalVisible, setNameModalVisible] = useState(false);
   const [isValueModalVisible, setValueModalVisible] = useState(false);
   const [inputName, setInputName] = useState('');
@@ -33,6 +25,55 @@ export default function MoveScreen() {
   const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
   const [updater, setUpdater] = useState(0); // for updating flat list on create
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
+  const fetchData = async () => {
+    try {
+      // console.log('Fetching data for user:', global.userData.id);
+
+      // Fetch motors data
+      const motorsResponse = await fetch('https://ergoquestapp.azurewebsites.net/motors');
+      const motorsData = await motorsResponse.json();
+      // console.log('Motors data:', motorsData);
+
+      // Fetch motor positions data
+      const motorPositionsResponse = await fetch('https://ergoquestapp.azurewebsites.net/motorpositions');
+      const motorPositionsData = await motorPositionsResponse.json();
+      // console.log('Motor positions data:', motorPositionsData);
+
+      // console.log('Global Data: ', global.userData);
+
+      // Filter motor positions by global.userData.id
+      const filteredMotorPositions = motorPositionsData.filter(position => 
+        position?.userid && 
+        Number(position.userid) === Number(global.userData.id) &&
+        position?.presetsid === global.selectedPresetId
+      );
+    
+      // console.log('Filtered motor positions:', filteredMotorPositions);
+
+      // Merge the data
+      const mergedData = filteredMotorPositions.map(motorPosition => {
+        const motor = motorsData.find(m => m?.id && Number(m.id) === Number(motorPosition.motorid));
+        return {
+          id: motorPosition.motorid,
+          name: motor ? motor.name : 'Unknown',
+          percent: motorPosition.angle
+        };
+      });
+
+      global.moves = mergedData;
+      setMoves(mergedData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Alert.alert('Error', 'Failed to fetch data!');
+    }
+  };
+
+  useEffect(() => {
+    // Check if the user is logged in
+    if (global.userData && global.userData.id) {
+      fetchData(); // Call the fetchData function
+    }
+  }, [global.userData]);
 
   useEffect(() => {
     return () => {
@@ -43,28 +84,53 @@ export default function MoveScreen() {
   }, [intervalId]);
 
   useFocusEffect(() => {
+    global.help = "Move";
     setMoves(global.moves);
     return () => {
       setMoves(global.moves);
     }
   });
 
-  const increasePercent = (index) => {
-    setMoves((currentMoves) => {
-      const newMoves = [...currentMoves];
-      const currentPercent = newMoves[index].percent;
-      newMoves[index].percent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
-      return newMoves;
-    });
+  const increasePercent = async (index) => {
+    const newMoves = [...global.moves];
+    const currentPercent = newMoves[index].percent;
+    const newPercent = currentPercent < 100 ? currentPercent + 1 : currentPercent;
+    newMoves[index].percent = newPercent;
+
+    setMoves(newMoves);
+
+    if (global.userData && global.userData.id) {
+      try {
+        const selectedMotorId = newMoves[index].id;
+        await confirmMotorAndPosition(selectedMotorId, newPercent);
+      } catch (error) {
+        console.error('Error updating motor position:', error);
+        Alert.alert('Error', 'Failed to update motor position!');
+      }
+    } else {
+      console.log('User not logged in. Local changes only.');
+    }
   };
-  
-  const decreasePercent = (index) => {
-    setMoves((currentMoves) => {
-      const newMoves = [...currentMoves];
-      const currentPercent = newMoves[index].percent;
-      newMoves[index].percent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
-      return newMoves;
-    });
+
+  const decreasePercent = async (index) => {
+    const newMoves = [...global.moves];
+    const currentPercent = newMoves[index].percent;
+    const newPercent = currentPercent > 0 ? currentPercent - 1 : currentPercent;
+    newMoves[index].percent = newPercent;
+
+    setMoves(newMoves);
+
+    if (global.userData && global.userData.id) {
+      try {
+        const selectedMotorId = newMoves[index].id;
+        await confirmMotorAndPosition(selectedMotorId, newPercent);
+      } catch (error) {
+        console.error('Error updating motor position:', error);
+        Alert.alert('Error', 'Failed to update motor position!');
+      }
+    } else {
+      console.log('User not logged in. Local changes only.');
+    }
   };
 
   const startChange = (action) => {
@@ -73,7 +139,7 @@ export default function MoveScreen() {
     const id = setInterval(action, 100);
     setIntervalId(id);
   };
-  
+
   const stopChange = () => {
     if (intervalId) {
       clearInterval(intervalId);
@@ -81,11 +147,21 @@ export default function MoveScreen() {
     }
   };
 
-  const handleNameChange = () => {
+  const handleNameChange = async () => {
     if (inputName.trim()) {
-      global.moves[selectedMoveIndex].name = inputName;
-      setMoves(global.moves);
-      // update actuator names in presets
+      // Update the local state
+      const updatedMoves = global.moves.map((move, index) => {
+        if (index === selectedMoveIndex) {
+          return { ...move, name: inputName };
+        }
+        return move;
+      });
+
+      // Update global moves and local state
+      global.moves = updatedMoves;
+      setMoves(updatedMoves);
+
+      // Update actuator names in presets
       for (let i = 0; i < global.presets.length; i++) {
         if (global.presets[i].actuatorValues[selectedMoveIndex].id = global.moves[selectedMoveIndex].id) {
           global.presets[i].actuatorValues[selectedMoveIndex].name = inputName;
@@ -98,7 +174,20 @@ export default function MoveScreen() {
           }
         }
       }
-      // TODO: sync new preset settings to database
+
+      // Proceed with database update if the user is logged in
+      if (global.userData && global.userData.id) {
+        try {
+          const selectedMotorId = global.moves[selectedMoveIndex].id;
+          await updateMotorName(selectedMotorId, inputName);
+        } catch (error) {
+          console.error('Error updating motor name:', error);
+          Alert.alert('Error', 'Failed to update motor name!');
+        }
+      } else {
+        console.log('User not logged in. Local changes only.');
+      }
+
       setInputName('');
       setNameModalVisible(false);
     } else {
@@ -107,11 +196,37 @@ export default function MoveScreen() {
   };
 
 
-  const handlePercentChange = () => {
+
+  const handlePercentChange = async () => {
     const newPercent = parseInt(inputPercent, 10);
     if (newPercent >= 0 && newPercent <= 100) {
-      global.moves[selectedMoveIndex].percent = newPercent;
-      setMoves(global.moves);
+      // Update the local state
+      const updatedMoves = global.moves.map((move, index) => {
+        if (index === selectedMoveIndex) {
+          return { ...move, percent: newPercent };
+        }
+        return move;
+      });
+
+      // Update global moves and local state
+      global.moves = updatedMoves;
+      setMoves(updatedMoves);
+      setUpdater(updater + 1);
+
+      // Proceed with database update if the user is logged in
+      if (global.userData && global.userData.id) {
+        try {
+          console.log(selectedMoveIndex);
+          const selectedMotorId = global.moves[selectedMoveIndex].id;
+          await confirmMotorAndPosition(selectedMotorId, newPercent);
+        } catch (error) {
+          console.error('Error updating motor position:', error);
+          Alert.alert('Error', 'Failed to update motor position!');
+        }
+      } else {
+        console.log('User not logged in. Local changes only.');
+      }
+
       setInputPercent('');
       setValueModalVisible(false);
     } else {
@@ -119,37 +234,24 @@ export default function MoveScreen() {
     }
   };
 
-  const toggleMenuSize = () => {
-    setIsMenuExpanded(!isMenuExpanded); // This toggles the expanded state
-  };
-
   const OptionModal = ({ isVisible, onClose, options }) => (
     <Modal isVisible={isVisible}>
       <View style={styles.modalContent}>
         {options.map(option => (
           <TouchableOpacity key={option.label} onPress={option.action}>
-            {/* Apply the style conditionally based on isMenuExpanded */}
-            <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+            <Text style={styles.optionText}>
               {option.label}
             </Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity onPress={onClose}>
-          <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
+          <Text style={styles.optionText}>
             Close
           </Text>
         </TouchableOpacity>
       </View>
     </Modal>
   );
-
-  const handleMenuOption = (option) => {
-    if (option === 'name') {
-      setNameModalVisible(true);
-    } else if (option === 'value') {
-      setValueModalVisible(true);
-    }
-  };
 
   const menuOptions = [
     {
@@ -180,7 +282,7 @@ export default function MoveScreen() {
             },
             {
               text: 'OK',
-              onPress: () => removeMove(selectedMoveIndex),
+              onPress: () => removeMove(),
             },
           ],
           { cancelable: false }
@@ -190,54 +292,240 @@ export default function MoveScreen() {
     }
   ];
 
-  const addNewMove = () => {
-    if (global.moves.length < 6) {
-      let minimumOpenID = 1; // find lowest open ID value
-      for (let i = 1; i < 7; i++) {
-        for (let j = 0; j < global.moves.length; j++) {
-          if (global.moves[j].id == i) { // compare with type conversion in case id is read as string
-            minimumOpenID = i + 1;
-            continue;
-          }
-        }
-        if (minimumOpenID == i) {
-          break;
+  const createPreset = async () => {
+    let largestIndex = 1;
+    let newID;
+
+    if (global.presets.length != 0) {
+      for (let i = 0; i < global.presets.length; i++) {
+        if (global.presets[i].id > largestIndex) {
+          largestIndex = global.presets[i].id;
         }
       }
-      global.moves.push({ id: minimumOpenID, name: 'New Actuator', percent: 0 }); // did not refresh screen
-      global.moves[0].id = global.moves[0].id;
-      setMoves(global.moves);
-      setUpdater(updater + 1);
-      // update actuator count in presets
+      newID = largestIndex + 1;
+    } else {
+      newID = 1;
+    }
+
+    //console.log(newID);
+
+    if (tempName === "" || tempName == undefined) {
+      tempName = "Preset " + newID + "";
+    }
+
+    if (global.userData && global.userData.id) {
+      const newPresetData = {
+        name: tempName,
+        userId: global.userData.id
+      };
+
+      try {
+        const newPreset = await savePresetToDatabase(newPresetData);
+        if (newPreset && newPreset.id) {
+          global.presets.push({
+            id: newPreset.id, // Spread the newPreset object
+            name: tempName,
+            actuatorValues: global.moves,
+          });
+          //console.log(global.moves);
+          //console.log(global.presets);
+          global.selectedPresetId = newPreset.id;
+        } else {
+          throw new Error("Failed to create new preset");
+        }
+      } catch (error) {
+        console.error("Error creating preset:", error);
+        // Handle the error, maybe alert the user
+        return;
+      }
+    } else {
+      // console.log("Create preset: " + tempName);
+      let newPresets = [];
       for (let i = 0; i < global.presets.length; i++) {
-        global.presets[i].actuatorValues.push({
-          id: minimumOpenID,
-          name: 'New Actuator',
-          percent: 0
+        newPresets.push(global.presets[i]);
+      }
+      // TODO: get actuatorValues from move screen
+      newPresets.push({
+        name: tempName,
+        id: newID,
+        actuatorValues: global.moves,
+      });
+      global.presets = newPresets;
+    }
+    console.log("Selected Preset ID: ", global.selectedPresetId);
+    // newPresets[newPresets.length - 1].actuatorValues.push({id: 1, position: 25}); // 2 ways of saving presets available
+    tempName = undefined;
+    setCreateVisible(false);
+    setCreateOptionsVisible(false); // just in case
+  };
+
+  const savePresetToDatabase = async (data) => {
+    try {
+      const response = await fetch('https://ergoquestapp.azurewebsites.net/presets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          DBUserID: data.userId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorResponse = await response.text();
+        throw new Error(`HTTP Error: ${response.status} - ${errorResponse}`);
+      }
+
+      const responseData = await response.json();
+      console.log("Response from savePresetToDatabase:", responseData);
+      return responseData;
+    } catch (error) {
+      console.error('Error saving preset to database:', error);
+      // Further error handling or user notification
+    }
+  };
+
+  const motorPositionExists = async (motorPositionId, userID) => {
+    try {
+      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}/${userID}`);
+      if (response.ok) {
+        const motorPositionData = await response.json();
+        return !!motorPositionData.id; // If motor position data with the ID exists, return true
+      }
+      return false; // If the request fails, assume the motor position does not exist
+    } catch (error) {
+      console.error('Error checking motor position existence:', error);
+      return false; // In case of error, assume the motor position does not exist
+    }
+  };
+
+  const motorExists = async (motorId) => {
+    try {
+      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motors/${motorId}`);
+      if (response.ok) {
+        const motorData = await response.json();
+        return !!motorData.id; // If motor data with the ID exists, return true
+      }
+      return false; // If the request fails, assume the motor does not exist
+    } catch (error) {
+      console.error('Error checking motor existence:', error);
+      return false; // In case of error, assume the motor does not exist
+    }
+  };
+
+
+  const confirmMotorAndPosition = async (motorId, percent) => {
+    try {
+      // Get the motor name from global.moves
+      const motorName = global.moves.find(move => move.id === motorId)?.name || 'New Actuator';
+
+      let motorData;
+
+      if (await motorExists(motorId)) {
+        // Update existing motor
+        const updateMotorResponse = await fetch(`https://ergoquestapp.azurewebsites.net/motors/${motorId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: motorName }),
+        });
+        motorData = await updateMotorResponse.json();
+      } else {
+        // Create new motor
+        const createMotorResponse = await fetch('https://ergoquestapp.azurewebsites.net/motors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: motorName }),
+        });
+        motorData = await createMotorResponse.json();
+      }
+
+      // Create or Update MotorPosition
+      const motorPositionData = {
+        angle: percent,
+        motorID: motorData.id,
+        userID: global.userData.id,
+        presetID: global.selectedPresetId
+      };
+
+
+      // Assuming a similar approach for motor position: check if it exists and then create or update
+      // Implement motorPositionExists and updateMotorPosition logic as per your application's need
+      if (await motorPositionExists(motorId, global.userData.id)) {
+        // Update motor position
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorId}/${global.userData.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(motorPositionData),
+        });
+      } else {
+        // Create motor position
+        await fetch('https://ergoquestapp.azurewebsites.net/motorpositions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(motorPositionData),
         });
       }
-      // TODO: sync new preset settings to database
-    } else {
-      Alert.alert('Error', 'You can only add up to 6 moves!');
+    } catch (error) {
+      console.error('Error confirming motor and position:', error);
+      Alert.alert('Error', 'Failed to confirm motor and position!');
+    }
+  };
+
+  const updateMotorName = async (motorId, newName) => {
+    try {
+      if (await motorExists(motorId)) {
+        // Update existing motor's name
+        await fetch(`https://ergoquestapp.azurewebsites.net/motors/${motorId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+      } else {
+        // Create new motor if it doesn't exist
+        await fetch('https://ergoquestapp.azurewebsites.net/motors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+      }
+    } catch (error) {
+      console.error('Error updating motor name:', error);
+      Alert.alert('Error', 'Failed to update motor name!');
     }
   };
 
   const renderMove = ({ item, index }) => (
     <View style={styles.frame}>
-      <View style={styles.header}>
+      {/* TouchableOpacity wraps the entire upper part */}
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => {
+          setSelectedMoveIndex(index); // Set the index for the selected move
+          setMenuVisible(true); // Open the modal
+        }}
+      >
         <Text style={styles.percentText}>{item.percent}%</Text>
         <Text style={styles.nameText}>{item.name}</Text>
-        <TouchableOpacity onPress={() => {
-          setSelectedMoveIndex(index); // Update the selected move index
-          setMenuVisible(!menuVisible);
-        }}>
-          <Ionicons name="ellipsis-vertical" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
+        <Ionicons name="ellipsis-vertical" size={24} color="black" />
+      </TouchableOpacity>
+
       <View style={styles.buttons}>
         <TouchableOpacity
           style={styles.button}
-          onPressIn={() => startDecreasing(index)}  // Pass the index here
+          onPressIn={() => startDecreasing(index)}
           onPressOut={stopChange}
         >
           <Text style={styles.buttonText}>-</Text>
@@ -245,7 +533,7 @@ export default function MoveScreen() {
 
         <TouchableOpacity
           style={styles.button}
-          onPressIn={() => startIncreasing(index)}  // Pass the index here
+          onPressIn={() => startIncreasing(index)}
           onPressOut={stopChange}
         >
           <Text style={styles.buttonText}>+</Text>
@@ -260,13 +548,37 @@ export default function MoveScreen() {
     );
   }
 
-  const removeMove = (index) => {
-    global.moves = (global.moves.filter((_, i) => i !== index));
-    setMoves(global.moves);
+  const removeMove = async () => {
+    console.log(selectedMoveIndex);
+    // Get the motor position ID before removal
+    const motorPositionId = global.moves[selectedMoveIndex]?.id;
+
+    // Remove the move from the local state
+    const updatedMoves = global.moves.filter((_, i) => i !== selectedMoveIndex);
+    global.moves = updatedMoves;
+    setMoves(updatedMoves);
     setMenuVisible(false); // Close the menu after removing the move
+
+    // Proceed with database deletion if the user is logged in
+    if (global.userData && global.userData.id && motorPositionId !== undefined) {
+      try {
+        // Delete the motor position from the database
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}/${global.userData.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        console.log(`Motor position with ID ${motorPositionId} deleted from database.`);
+      } catch (error) {
+        console.error('Error deleting motor position:', error);
+        Alert.alert('Error', 'Failed to delete motor position!');
+      }
+    } else {
+      console.log('User not logged in. Only local changes made.');
+    }
   };
-
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -275,16 +587,15 @@ export default function MoveScreen() {
         data={moves}
         scrollEnabled={true}
         style={{ maxWidth: "100%" }} // fixes horizontal scroll issue
-        extraData={updater} // allows for immediate re-render when adding new moves; otherwise, re-rendered upon screen movement
         renderItem={renderMove}   // Use the renderMove function here
         keyExtractor={(item, index) => index.toString()}
         ItemSeparatorComponent={Separator} />
 
       <TouchableOpacity
         style={styles.addMoveButton}
-        onPress={addNewMove}
+        onPress={createNewPreset}
       >
-        <Text style={styles.addMoveButtonText}>ADD NEW MOVE</Text>
+        <Text style={styles.addMoveButtonText}>Create New Preset</Text>
       </TouchableOpacity>
 
       <OptionModal
@@ -301,42 +612,40 @@ export default function MoveScreen() {
             onChangeText={setInputName}
             placeholder="Enter new name"
           />
-         <TouchableOpacity onPress={handleNameChange}>
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
-        Confirm
-      </Text>
-    </TouchableOpacity>
-    <TouchableOpacity onPress={() => setNameModalVisible(false)}>
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
-        Close
-      </Text>
-    </TouchableOpacity>
-  </View>
-</Modal>
+          <TouchableOpacity onPress={handleNameChange}>
+            <Text style={styles.optionText}>
+              Confirm
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setNameModalVisible(false)}>
+            <Text style={styles.optionText}>
+              Close
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
-<Modal isVisible={isValueModalVisible}>
-  <View style={styles.modalContent}>
-    <TextInput
-      style={styles.input}
-      value={inputPercent}
-      onChangeText={setInputPercent}
-      placeholder="Enter new percentage (0-100)"
-      keyboardType="numeric"
-    />
-    <TouchableOpacity onPress={handlePercentChange}>
-      {/* Apply the style conditionally based on isMenuExpanded */}
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
-        Confirm
-      </Text>
-    </TouchableOpacity>
-    <TouchableOpacity onPress={() => setValueModalVisible(false)}>
-      {/* Apply the style conditionally based on isMenuExpanded */}
-      <Text style={isMenuExpanded ? styles.optionTextExpanded : styles.optionText}>
-        Close
-      </Text>
-    </TouchableOpacity>
-  </View>
-</Modal>
+      <Modal isVisible={isValueModalVisible}>
+        <View style={styles.modalContent}>
+          <TextInput
+            style={styles.input}
+            value={inputPercent}
+            onChangeText={setInputPercent}
+            placeholder="Enter new percentage (0-100)"
+            keyboardType="numeric"
+          />
+          <TouchableOpacity onPress={handlePercentChange}>
+            <Text style={styles.optionText}>
+              Confirm
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setValueModalVisible(false)}>
+            <Text style={styles.optionText}>
+              Close
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -374,7 +683,7 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '70%', // adjusted for bigger buttons
+    width: '80%', // adjusted for bigger buttons
     marginBottom: 20,
   },
   button: {
@@ -397,7 +706,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    padding: 20,
+    padding: 75,
     borderRadius: 10,
     alignItems: 'center',
   },
@@ -408,9 +717,9 @@ const styles = StyleSheet.create({
   },
 
   addMoveButton: {
-    marginTop: 'auto',  // pushes the button to the bottom of the available space
-    marginBottom: 40,   // adds some space at the bottom for aesthetics
-    width: '70%',
+    marginTop: 15,  // pushes the button to the bottom of the available space
+    marginBottom: 25,   // adds some space at the bottom for aesthetics
+    width: '88%',
     height: 60,
     justifyContent: 'center',
     alignItems: 'center',
@@ -419,20 +728,23 @@ const styles = StyleSheet.create({
   },
 
   addMoveButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'black',
-
-
-
+    alignContent: "center",
+    textAlign: "center",
+    justifyContent: "center",
+    fontSize: 24,
+    padding: "5%",
+    width: "100%",
+    height: "100%",
   },
 
   optionText: {
-    fontSize: 18, 
+    fontSize: 26,
+    marginVertical: 8,
   },
 
   optionTextExpanded: {
-    fontSize: 24, 
+    fontSize: 26,
+    marginVertical: 10,
   },
 
 

@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pressable, FlatList, Button } from 'react-native';
-import Modal from 'react-native-modal';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, FlatList, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Dialog from "react-native-dialog";
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
 
 import { globalStyles } from '../styles/global';
 
@@ -14,8 +13,9 @@ or
 https://react.dev/reference/react/createContext -NO: cannot produce and consume in same component
 */
 
-export default function PresetsScreen({ props, navigation }) {
+export default function PresetsScreen({ navigation }) {
     // hooks
+    const [presets, setPresets] = useState([]); // for screen refresh purposes only
     const [renameVisible, setRenameVisible] = useState(false);
     const [createVisible, setCreateVisible] = useState(false);
     const [deleteVisible, setDeleteVisible] = useState(false);
@@ -28,18 +28,15 @@ export default function PresetsScreen({ props, navigation }) {
     let tempName;
 
     // screen refresh
-    // useFocusEffect(() => {
-    //     // highlight current selected preset?
-    //     return () => {
-
-    //     }
-    //   });
+    useFocusEffect(() => {
+        global.help = "Presets";
+        setPresets(global.presets);
+        return () => {
+            setPresets(global.presets);
+        }
+    });
 
     // functions
-    const onCreatePress = () => {
-        // console.log('Create Preset Button Tapped');
-        setCreateVisible(createVisible ? false : true);
-    };
 
     const onCreateLongPress = () => {
         // console.log('Create Preset Button Held');
@@ -72,12 +69,14 @@ export default function PresetsScreen({ props, navigation }) {
     const startRename = (id) => {
         // console.log('Rename Preset with ID =', id);
         setSelectedID(id);
+        global.selectedPresetId = id;
         setRenameVisible(renameVisible ? false : true);
     };
 
     const openPresetOptions = (id) => {
         // console.log('Delete Preset with ID =', id);
         setSelectedID(id);
+        global.selectedPresetId = id;
         setPresetOptionsVisible(presetOptionsVisible ? false : true);
     };
 
@@ -116,34 +115,100 @@ export default function PresetsScreen({ props, navigation }) {
         }
     };
 
-    const createPreset = () => {
+    const createPreset = async () => {
         let largestIndex = 1;
-        for (let i = 0; i < global.presets.length; i++) {
-            if (global.presets[i].id > largestIndex) {
-                largestIndex = global.presets[i].id;
+        let newID;
+
+        if(global.presets.length != 0) {
+            for (let i = 0; i < global.presets.length; i++) {
+                if (global.presets[i].id > largestIndex) {
+                    largestIndex = global.presets[i].id;
+                }
             }
+            newID = largestIndex + 1;
+        } else {
+            newID = 1;
         }
-        const newID = largestIndex + 1;
+
+        //console.log(newID);
+
         if (tempName === "" || tempName == undefined) {
             tempName = "Preset " + newID + "";
         }
-        // console.log("Create preset: " + tempName);
-        let newPresets = [];
-        for (let i = 0; i < global.presets.length; i++) {
-            newPresets.push(global.presets[i]);
+
+        if (global.userData && global.userData.id) {
+            const newPresetData = {
+                name: tempName,
+                userId: global.userData.id
+            };
+
+            try {
+                const newPreset = await savePresetToDatabase(newPresetData);
+                if (newPreset && newPreset.id) {
+                    global.presets.push({
+                        id: newPreset.id, // Spread the newPreset object
+                        name: tempName,
+                        actuatorValues: global.moves,
+                    });
+                    //console.log(global.moves);
+                    //console.log(global.presets);
+                    global.selectedPresetId = newPreset.id;
+                } else {
+                    throw new Error("Failed to create new preset");
+                }
+            } catch (error) {
+                console.error("Error creating preset:", error);
+                // Handle the error, maybe alert the user
+                return;
+            }
+        } else {
+            // console.log("Create preset: " + tempName);
+            let newPresets = [];
+            for (let i = 0; i < global.presets.length; i++) {
+                newPresets.push(global.presets[i]);
+            }
+            // TODO: get actuatorValues from move screen
+            newPresets.push({
+                name: tempName,
+                id: newID,
+                actuatorValues: global.moves,
+            });
+            global.presets = newPresets;
         }
-        // TODO: get actuatorValues from move screen
-        newPresets.push({
-            name: tempName,
-            id: newID,
-            actuatorValues: global.moves,
-        });
+        console.log("Selected Preset ID: ", global.selectedPresetId);
         // newPresets[newPresets.length - 1].actuatorValues.push({id: 1, position: 25}); // 2 ways of saving presets available
-        global.presets = newPresets;
         tempName = undefined;
         setCreateVisible(false);
         setCreateOptionsVisible(false); // just in case
     };
+
+    const savePresetToDatabase = async (data) => {
+        try {
+            const response = await fetch('https://ergoquestapp.azurewebsites.net/presets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: data.name,
+                    DBUserID: data.userId
+                }),
+            });
+    
+            if (!response.ok) {
+                const errorResponse = await response.text();
+                throw new Error(`HTTP Error: ${response.status} - ${errorResponse}`);
+            }
+    
+            const responseData = await response.json();
+            console.log("Response from savePresetToDatabase:", responseData);
+            return responseData;
+        } catch (error) {
+            console.error('Error saving preset to database:', error);
+            // Further error handling or user notification
+        }
+    };
+    
 
     const deletePreset = () => {
         if (selectedID === undefined) {
@@ -174,6 +239,7 @@ export default function PresetsScreen({ props, navigation }) {
 
     const updateActuators = () => {
         const id = selectedID;
+        global.selectedPresetId = id;
         console.log('Activate ID: ', id);
         for (let i = 0; i < global.presets.length; i++) {
             if (global.presets[i].id === id) {
@@ -213,26 +279,32 @@ export default function PresetsScreen({ props, navigation }) {
     return (
         <View style={styles.container}>
             {/* Presets listed */}
-            <FlatList scrollEnabled={true} style={styles.pageArea} data={global.presets} renderItem={({ item }) => (
-                <View style={[styles.preset]}>
-                <Pressable
-                  onPress={() => activate(item.id)}
-                  onLongPress={() => startRename(item.id)}
-                  style={[styles.presetButton, styles.presetButtonLeft]}
-                >
-                  <Text style={[styles.presetButtonText]} >{item.name}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => openPresetOptions(item.id)}
-                  onLongPress={() => openPresetOptions(item.id)}
-                  style={[styles.presetButton, styles.presetButtonRight]}
-                >
-                  <View style={styles.iconWrapper}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color="black" />
-                  </View>
-                </Pressable>
-              </View>
-            )} >
+            <FlatList
+                scrollEnabled={true}
+                contentContainerStyle={{ paddingBottom: 20 }} // Adds padding at the bottom of the list
+                style={styles.pageArea}
+                data={global.presets}
+                extraData={presets} // to help screen refresh when changes made in Move screen
+                renderItem={({ item }) => (
+                    <View style={[styles.preset]}>
+                        <TouchableOpacity
+                            onPress={() => activate(item.id)}
+                            onLongPress={() => startRename(item.id)}
+                            style={[styles.presetButton, styles.presetButtonLeft]}
+                        >
+                            <Text style={[styles.presetButtonText]}>{item.name}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => openPresetOptions(item.id)}
+                            onLongPress={() => openPresetOptions(item.id)}
+                            style={[styles.presetButton, styles.presetButtonRight]}
+                        >
+                            <View style={styles.iconWrapper}>
+                                <Ionicons name="ellipsis-horizontal" size={24} color="black" />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                )} >
             </FlatList>
 
             {/* "Add Preset" button at bottom of screen */}
@@ -240,24 +312,34 @@ export default function PresetsScreen({ props, navigation }) {
                 <Pressable
                     onPress={onCreateLongPress}
                     onLongPress={onCreateLongPress}
-                    style={[styles.addButton, (updating >= 0) ? styles.hide : styles.show]}
+                    style={({ pressed }) => [
+                        styles.addButton,
+                        {
+                            backgroundColor: pressed ? 'lightgray' : 'white',
+                            borderRadius: 15,
+                        },
+                        (updating >= 0) ? styles.hide : styles.show
+                    ]}
                 >
-                    {({ pressed }) => (
-                        <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
-                            Create New Preset
-                        </Text>
-                    )}
+                    <Text style={styles.buttonText}>
+                        Create New Preset
+                    </Text>
                 </Pressable>
                 {/* Update preset */}
                 <Pressable
                     onPress={finishUpdating}
-                    style={[styles.addButton, (updating < 0) ? styles.hide : styles.show]}
+                    style={({ pressed }) => [
+                        styles.addButton,
+                        {
+                            backgroundColor: pressed ? 'lightgray' : 'white',
+                            borderRadius: 15,
+                        },
+                        (updating < 0) ? styles.hide : styles.show
+                    ]}
                 >
-                    {({ pressed }) => (
-                        <Text style={[styles.buttonText, { backgroundColor: pressed ? 'lightgray' : 'white' }]}>
-                            Save over {updating >= 0 ? global.presets[updating].name : "Selected Preset"}?
-                        </Text>
-                    )}
+                    <Text style={styles.buttonText}>
+                        Save over {updating >= 0 ? global.presets[updating].name : "Selected Preset"}?
+                    </Text>
                 </Pressable>
             </View>
             {/* Dialogs */}
@@ -332,7 +414,7 @@ const styles = StyleSheet.create({
     // for area at the bottom of the screen
     pageArea: {
         width: "88%",
-        marginBottom: "20%",
+        marginBottom: 25, // Adjust this value to increase the space at the bottom
         marginLeft: "1%",
         marginRight: "1%",
         borderRadius: 10,
@@ -347,12 +429,11 @@ const styles = StyleSheet.create({
         borderStyle: "solid",
         borderColor: "#FFFFFF",
         borderWidth: "2",
-        borderRadius: 10,
+        borderRadius: 15, // old: 10
         flexDirection: "row",
         justifyContent: "flex-start",
         backgroundColor: "#ffffff",
-        scrollEnabled: true,
-        borderRadius: 10
+        scrollEnabled: true
     },
     presetButton: {
         flex: 1,
@@ -361,8 +442,6 @@ const styles = StyleSheet.create({
         flexBasis: "80%",
         alignItems: 'center',
         justifyContent: 'center',
-        
-        
     },
     presetButtonRight: {
         flexBasis: "20%",
@@ -371,9 +450,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderLeftWidth: 10,
         borderColor: "#FFFFFF"
-
-
-        
     },
     presetButtonText: {
         textAlign: "center",
@@ -381,20 +457,18 @@ const styles = StyleSheet.create({
         fontSize: 24,
         padding: "2%",
         textAlignVertical: 'center',
-        
-        
-        
     },
     pageBottom: {
         height: "10%",
-        
     },
     addButton: {
         width: "100%",
-        height: "100%",
-        borderRadius: 20,
-        
+        height: 70,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
+
     buttonText: {
         alignContent: "center",
         textAlign: "center",
@@ -403,7 +477,7 @@ const styles = StyleSheet.create({
         padding: "5%",
         width: "100%",
         height: "100%",
-        
+
     },
     hide: {
         display: "none",
@@ -418,6 +492,5 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         justifyContent: 'center',
         alignItems: 'center',
-      },
-      
+    },
 });

@@ -65,6 +65,7 @@ const MoveScreen = () => {
   
 
   useFocusEffect(() => {
+    global.help = "Timed";
     if (global.times.length !== moveList.length) {
       setMoveList(JSON.parse(JSON.stringify(global.times)));
       setIsPlaying(false);
