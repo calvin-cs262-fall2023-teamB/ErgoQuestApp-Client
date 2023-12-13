@@ -14,3 +14,4 @@ global.moves = [{"id": 1, "name": "default value", "percent": 0}, {"id": 2, "nam
 global.times = [];
 global.userData;
 global.help = "Home"; // used to determine what to display in the help menu
+global.moveReady = true;

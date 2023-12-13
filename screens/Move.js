@@ -60,12 +60,14 @@ export default function MoveScreen(  ) { // may need ( navigation ) for commente
 
   const startChange = (action) => {
     stopChange(); // Clear any existing interval before starting a new one
+    global.moveReady = false; // may not want this. Could cause delays
     action();
     const id = setInterval(action, 100);
     setIntervalId(id);
   };
   
   const stopChange = () => {
+    global.moveReady = true;
     if (intervalId) {
       clearInterval(intervalId);
       setIntervalId(null);
@@ -134,6 +136,7 @@ export default function MoveScreen(  ) { // may need ( navigation ) for commente
       label: 'Change Name',
       action: () => {
         setMenuVisible(false); // Close the options modal
+        global.moveReady = false;
         setNameModalVisible(true);
       }
     },
@@ -141,6 +144,7 @@ export default function MoveScreen(  ) { // may need ( navigation ) for commente
       label: 'Change Value',
       action: () => {
         setMenuVisible(false); // Close the options modal
+        global.moveReady = false;
         setValueModalVisible(true);
       }
     }
@@ -176,6 +180,7 @@ export default function MoveScreen(  ) { // may need ( navigation ) for commente
         style={styles.header}
         onPress={() => {
           setSelectedMoveIndex(index); // Set the index for the selected move
+          global.moveReady = false;
           setMenuVisible(true); // Open the modal
         }}
       >
@@ -231,7 +236,10 @@ export default function MoveScreen(  ) { // may need ( navigation ) for commente
 
       <OptionModal
         isVisible={menuVisible}
-        onClose={() => setMenuVisible(false)}
+        onClose={() => {
+          setMenuVisible(false);
+          global.moveReady = true;
+        }}
         options={menuOptions}
       />
 
