@@ -1,3 +1,7 @@
+/**
+ * MoveScreen component is responsible for managing and displaying a list of moves
+ * with a timer functionality, allowing users to start, stop, and edit moves.
+ */
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,8 +17,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
 
-
+/**
+ * MoveScreen functional component representing the move screen of the application.
+ * @returns {JSX.Element} React element.
+ */
 const MoveScreen = () => {
+  // State hooks for managing various aspects of the component
   const [moveList, setMoveList] = useState([{ moveID: 1, presetID: 1, time: 30 }]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -29,22 +37,24 @@ const MoveScreen = () => {
   const [isLooping, setIsLooping] = useState(false);
   const [editingMoveIndex, setEditingMoveIndex] = useState(null);
 
-  
-
-
-
+  /**
+   * Effect hook for managing the timer interval when the component mounts or updates.
+   */
   useEffect(() => {
     let interval;
     let startTime;
     let elapsedTime = 0;
-  
+
+    /**
+     * Helper function to start the timer and manage the countdown.
+     */
     const startTimer = () => {
       startTime = performance.now();
       interval = setInterval(() => {
         const now = performance.now();
         const elapsedSeconds = (now - startTime) / 1000;
         elapsedTime += elapsedSeconds;
-  
+
         setCountdown((prevCountdown) => {
           const adjustedCountdown = prevCountdown - Math.floor(elapsedTime);
           if (adjustedCountdown <= 0) {
@@ -53,24 +63,25 @@ const MoveScreen = () => {
           }
           return adjustedCountdown;
         });
-  
+
         startTime = now;
       }, 1000); // Run every second
     };
-  
+
     if (isPlaying && countdown > 0) {
       startTimer();
     } else if (isPlaying && countdown === 0) {
       startNextMove();
     }
-  
+
     return () => {
       clearInterval(interval);
     };
   }, [isPlaying, countdown, currentMoveIndex, moveList]);
-  
-  
 
+  /**
+   * Effect hook for updating the component when it gains focus.
+   */
   useFocusEffect(() => {
     global.help = "Timed";
     if (global.times.length !== moveList.length) {
@@ -80,28 +91,32 @@ const MoveScreen = () => {
     return () => {};
   });
 
-  // functions
+  /**
+   * Function to start the next move in the playlist.
+   */
   const startNextMove = () => {
     const nextIndex = currentMoveIndex + 1;
-  
+
     if (nextIndex < moveList.length || (nextIndex === moveList.length && isLooping)) {
       const nextMove = nextIndex < moveList.length ? moveList[nextIndex] : moveList[0];
-  
+
       setCurrentMoveIndex(nextIndex < moveList.length ? nextIndex : 0);
       setCountdown(nextMove.time * 60);
       setIsPlaying(true);
       const presetName = getNameFromID(nextMove.presetID);
-  
+
       // Update global.moves based on the selected preset
       updateMovesForPreset(nextMove.presetID);
-  
+
       console.log(`Starting Preset: ${presetName}`);
     } else {
       setIsPlaying(false);
     }
   };
-  
 
+  /**
+   * Function to start the timer based on the current move.
+   */
   const startTimer = () => {
     if (!isPlaying && moveList.length > 0) {
       const topMove = moveList[currentMoveIndex];
@@ -121,45 +136,55 @@ const MoveScreen = () => {
     }
   };
 
-
- 
-
+  /**
+   * Function to stop the timer and reset the move index.
+   */
   const stopTimer = () => {
     setIsPlaying(false);
     setCurrentMoveIndex(0);
     setCountdown(0);
   };
 
+  /**
+   * Function to add a new move to the playlist.
+   */
   const addNewMove = () => {
     if (selectedPreset === null || selectedPreset === -1) {
       setErrorMessage('Error: No preset selected');
       return;
     }
-  
+
     global.times.push({ presetID: selectedPreset, time: selectedTime });
     JSON.parse(JSON.stringify(global.times));
     setUpdater(updater + 1);
     setErrorMessage(''); // Clear error message on successful move addition
-  
+
     // Reset selectedPreset to a default value (modify if needed)
     setSelectedPreset(global.presets.length > 0 ? global.presets[0].id : -1);
     setSelectedTime('5'); // Reset selectedTime to a default value (modify if needed)
   };
 
+  /**
+   * Function to edit a move in the playlist.
+   * @param {number} index - Index of the move to be edited.
+   */
   const editMove = (index) => {
     setEditingMoveIndex(index);
     setIsModalVisible(true);
-  
+
     // Retrieve the preset and time of the move being edited
     const moveToEdit = moveList[index];
     setSelectedPreset(moveToEdit.presetID);
     setSelectedTime(moveToEdit.time.toString());
-  
+
     // Set the currently edited move
     setEditedMove(moveToEdit);
   };
-  
 
+  /**
+   * Function to move a move down in the playlist.
+   * @param {number} index - Index of the move to be moved down.
+   */
   const moveMoveDown = (index) => {
     if (index < moveList.length - 1) {
       const updatedMoveList = [...moveList];
@@ -173,6 +198,10 @@ const MoveScreen = () => {
     }
   };
 
+  /**
+   * Function to move a move up in the playlist.
+   * @param {number} index - Index of the move to be moved up.
+   */
   const moveMoveUp = (index) => {
     if (index > 0) {
       const updatedMoveList = [...moveList];
@@ -186,41 +215,36 @@ const MoveScreen = () => {
     }
   };
 
+  /**
+   * Function to delete the currently edited move.
+   */
   const deleteMove = () => {
     if (editingMoveIndex !== null) {
       setMoveList((prevMoveList) => {
         const updatedMoveList = [...prevMoveList];
         updatedMoveList.splice(editingMoveIndex, 1);
-  
+
         if (currentMoveIndex >= updatedMoveList.length && updatedMoveList.length > 0) {
           setCurrentMoveIndex(updatedMoveList.length - 1);
         } else if (currentMoveIndex >= updatedMoveList.length && updatedMoveList.length === 0) {
           setCurrentMoveIndex(0);
           setIsPlaying(false);
         }
-  
+
         global.times = JSON.parse(JSON.stringify(updatedMoveList));
-  
+
         return updatedMoveList;
       });
-  
+
       setEditingMoveIndex(null);
       setIsModalVisible(false);
       setUpdater(updater + 1);
     }
   };
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
 
-
+  /**
+   * Function to save the edited move.
+   */
   const saveEdit = () => {
     const updatedMoveList = [...moveList];
     if (selectedPreset && selectedPreset >= 0) {
@@ -237,6 +261,11 @@ const MoveScreen = () => {
     setCurrentMoveIndex(0);
   };
 
+  /**
+   * Function to get the name of a preset based on its ID.
+   * @param {number} id - ID of the preset.
+   * @returns {string} Name of the preset.
+   */
   const getNameFromID = (id) => {
     for (let i = 0; i < global.presets.length; i++) {
       if (global.presets[i].id == id) { // use == not ===; type conversion needed
@@ -246,9 +275,12 @@ const MoveScreen = () => {
     console.log("No name found for id", id);
     return "null";
   }
-  
-  
 
+  /**
+   * Function to format the time in seconds into a readable string.
+   * @param {number} seconds - Time in seconds.
+   * @returns {string} Formatted time string.
+   */
   const formatTime = (seconds) => {
     if (seconds <= 0) {
       return 'Timer stopped';
@@ -269,7 +301,12 @@ const MoveScreen = () => {
     return timeParts.join(' ');
   };
 
-  // Function to update global.moves based on the selected preset
+  /**
+   * Function to update global.moves based on the selected preset.
+   * @param {number} presetID - ID of the selected preset.
+   */
+
+  
   const updateMovesForPreset = (presetID) => {
     const preset = global.presets.find((p) => p.id === presetID);
 
@@ -283,6 +320,10 @@ const MoveScreen = () => {
       console.error(`Preset with ID ${presetID} not found`);
     }
   };
+
+  /**
+   * JSX structure for rendering the MoveScreen component.
+   */
 
   
   return (
