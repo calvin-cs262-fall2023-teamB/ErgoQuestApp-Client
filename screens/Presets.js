@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Dialog from "react-native-dialog";
@@ -27,6 +27,78 @@ export default function PresetsScreen({ navigation }) {
     // Extra Variables
     let tempName;
 
+    const fetchData = async () => {
+        try {
+            // console.log('Fetching data for user:', global.userData.id);
+
+            // Fetch motors data
+            const motorsResponse = await fetch('https://ergoquestapp.azurewebsites.net/motors');
+            const motorsData = await motorsResponse.json();
+            // console.log('Motors data:', motorsData);
+
+            // Fetch motor positions data
+            const motorPositionsResponse = await fetch('https://ergoquestapp.azurewebsites.net/motorpositions');
+            const motorPositionsData = await motorPositionsResponse.json();
+
+            const presetsResponse = await fetch('https://ergoquestapp.azurewebsites.net/presets');
+            const presetsData = await presetsResponse.json();
+            // console.log('Motor positions data:', motorPositionsData);
+
+            // console.log('Global Data: ', global.userData);
+
+            // Filter motor positions by global.userData.id
+            // Filter motor positions by global.userData.id
+            const filteredPresets = presetsData.filter(preset =>
+                preset?.dbuserid &&
+                Number(preset.dbuserid) === Number(global.userData.id));
+
+
+            // console.log('Global Preset Id: ', global.selectedPresetId);
+            // console.log('User ID: ', global.userData.id);
+            // console.log('Motor Position Data: ', motorPositionsData);
+            // console.log('Presets Data: ', presetsData);
+            // console.log('Motor Data: ', motorsData);
+            // console.log('Filtered Presets Data: ', filteredPresets);
+
+            const formattedPresets = presetsData.map(preset => {
+                // Filter motor positions for the current preset
+                const presetMotorPositions = motorPositionsData.filter(mp => 
+                    mp.presetid === preset.id && 
+                    Number(mp.userid) === Number(global.userData.id)
+                );
+        
+                // Map the motor positions to get the actuator values
+                const actuatorValues = presetMotorPositions.map(mp => {
+                    // Find the corresponding motor
+                    const motor = motorsData.find(m => m.id === mp.motorid);
+                    return {
+                        id: mp.motorid,
+                        name: motor ? motor.name : 'Unknown',
+                        percent: mp.angle
+                    };
+                });
+        
+                return {
+                    id: preset.id,
+                    name: preset.name,
+                    actuatorValues: actuatorValues
+                };
+            });
+            console.log(formattedPresets)
+            global.presets = formattedPresets;
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Alert.alert('Error', 'Failed to fetch data!');
+        }
+    };
+
+    useFocusEffect(() => {
+        // Check if the user is logged in
+        if (global.userData && global.userData.id) {
+            fetchData(); // Call the fetchData function
+        }
+    });
+
     // screen refresh
     useFocusEffect(() => {
         global.help = "Presets";
@@ -46,21 +118,26 @@ export default function PresetsScreen({ navigation }) {
     const activate = (id) => {
         setUpdating(-1);
         console.log('Activate ID: ', id);
-        for (let i = 0; i < global.presets.length; i++) {
-            if (global.presets[i].id === id) {
-                console.log("Set actuator values to:", global.presets[i].actuatorValues);
-                // DO NOT USE: global.moves = global.presets[i].actuatorValues; // Copies reference not value. Need deep copy.
-                const moveArray = [];
-                for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
-                    moveArray.push({
-                        "id": global.presets[i].actuatorValues[j].id,
-                        "name": global.presets[i].actuatorValues[j].name,
-                        "percent": global.presets[i].actuatorValues[j].percent,
-                    })
+        global.selectedPresetId = id;
+        if(global.userData && global.userData.id) {
+            return;
+        } else {
+            for (let i = 0; i < global.presets.length; i++) {
+                if (global.presets[i].id === id) {
+                    console.log("Set actuator values to:", global.presets[i].actuatorValues);
+                    // DO NOT USE: global.moves = global.presets[i].actuatorValues; // Copies reference not value. Need deep copy.
+                    const moveArray = [];
+                    for (let j = 0; j < global.presets[i].actuatorValues.length; j++) {
+                        moveArray.push({
+                            "id": global.presets[i].actuatorValues[j].id,
+                            "name": global.presets[i].actuatorValues[j].name,
+                            "percent": global.presets[i].actuatorValues[j].percent,
+                        })
+                    }
+                    global.moves = moveArray;
+                    // highlight active?
+                    return;
                 }
-                global.moves = moveArray;
-                // highlight active?
-                return;
             }
         }
         console.log("ERROR, ID not found in preset array");
@@ -119,7 +196,7 @@ export default function PresetsScreen({ navigation }) {
         let largestIndex = 1;
         let newID;
 
-        if(global.presets.length != 0) {
+        if (global.presets.length != 0) {
             for (let i = 0; i < global.presets.length; i++) {
                 if (global.presets[i].id > largestIndex) {
                     largestIndex = global.presets[i].id;
@@ -194,12 +271,12 @@ export default function PresetsScreen({ navigation }) {
                     DBUserID: data.userId
                 }),
             });
-    
+
             if (!response.ok) {
                 const errorResponse = await response.text();
                 throw new Error(`HTTP Error: ${response.status} - ${errorResponse}`);
             }
-    
+
             const responseData = await response.json();
             console.log("Response from savePresetToDatabase:", responseData);
             return responseData;
@@ -208,7 +285,7 @@ export default function PresetsScreen({ navigation }) {
             // Further error handling or user notification
         }
     };
-    
+
 
     const deletePreset = () => {
         if (selectedID === undefined) {
