@@ -26,6 +26,11 @@ const MoveScreen = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [editedMove, setEditedMove] = useState(null);
+  const [isLooping, setIsLooping] = useState(false);
+  const [editingMoveIndex, setEditingMoveIndex] = useState(null);
+
+  
+
 
 
   useEffect(() => {
@@ -77,21 +82,24 @@ const MoveScreen = () => {
   // functions
   const startNextMove = () => {
     const nextIndex = currentMoveIndex + 1;
-    if (nextIndex < moveList.length) {
-      const nextMove = moveList[nextIndex];
-      setCurrentMoveIndex(nextIndex);
+  
+    if (nextIndex < moveList.length || (nextIndex === moveList.length && isLooping)) {
+      const nextMove = nextIndex < moveList.length ? moveList[nextIndex] : moveList[0];
+  
+      setCurrentMoveIndex(nextIndex < moveList.length ? nextIndex : 0);
       setCountdown(nextMove.time * 60);
       setIsPlaying(true);
       const presetName = getNameFromID(nextMove.presetID);
-
+  
       // Update global.moves based on the selected preset
       updateMovesForPreset(nextMove.presetID);
-
+  
       console.log(`Starting Preset: ${presetName}`);
     } else {
       setIsPlaying(false);
     }
   };
+  
 
   const startTimer = () => {
     if (!isPlaying && moveList.length > 0) {
@@ -138,17 +146,18 @@ const MoveScreen = () => {
   };
 
   const editMove = (index) => {
-    setCurrentMoveIndex(index);
+    setEditingMoveIndex(index);
     setIsModalVisible(true);
-
+  
     // Retrieve the preset and time of the move being edited
     const moveToEdit = moveList[index];
     setSelectedPreset(moveToEdit.presetID);
     setSelectedTime(moveToEdit.time.toString());
-
+  
     // Set the currently edited move
     setEditedMove(moveToEdit);
   };
+  
 
   const moveMoveDown = (index) => {
     if (index < moveList.length - 1) {
@@ -176,17 +185,39 @@ const MoveScreen = () => {
     }
   };
 
-  const deleteMove = (index) => {
-    const updatedMoveList = [...moveList];
-    updatedMoveList.splice(index, 1);
-    setMoveList(updatedMoveList);
-    global.times = JSON.parse(JSON.stringify(updatedMoveList));
-    if (index === currentMoveIndex) {
-      startNextMove();
+  const deleteMove = () => {
+    if (editingMoveIndex !== null) {
+      setMoveList((prevMoveList) => {
+        const updatedMoveList = [...prevMoveList];
+        updatedMoveList.splice(editingMoveIndex, 1);
+  
+        if (currentMoveIndex >= updatedMoveList.length && updatedMoveList.length > 0) {
+          setCurrentMoveIndex(updatedMoveList.length - 1);
+        } else if (currentMoveIndex >= updatedMoveList.length && updatedMoveList.length === 0) {
+          setCurrentMoveIndex(0);
+          setIsPlaying(false);
+        }
+  
+        global.times = JSON.parse(JSON.stringify(updatedMoveList));
+  
+        return updatedMoveList;
+      });
+  
+      setEditingMoveIndex(null);
+      setIsModalVisible(false);
+      setUpdater(updater + 1);
     }
-    setUpdater(updater + 1);
-    setIsModalVisible(false);
   };
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 
   const saveEdit = () => {
@@ -262,23 +293,29 @@ const MoveScreen = () => {
           <Text style={styles.playlistHeaderText}>PLAYLISTS</Text>
         </View>
         {moveList.map((move, index) => (
-        <View
-          style={[styles.presetContainer, index === 0 && styles.currentMove]}
-          key={index}
-        >
-          <TextInput
-            style={styles.presetText}
-            value={getNameFromID(move.presetID)}
-          />
-          <TextInput
-            style={styles.timeText}
-            value={move.time.toString() + " minutes"}
-          />
-          <TouchableOpacity style={styles.editButton} onPress={() => editMove(index)}>
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-        ))}
+  <View
+    style={[
+      styles.presetContainer,
+      (index === currentMoveIndex) && styles.currentMove,
+      (isLooping && index === currentMoveIndex) && styles.loopingMove,
+    ]}
+    key={index}
+  >
+    <TextInput
+      style={styles.presetText}
+      value={getNameFromID(move.presetID)}
+    />
+    <TextInput
+      style={styles.timeText}
+      value={move.time.toString() + " minutes"}
+    />
+    <TouchableOpacity style={styles.editButton} onPress={() => editMove(index)}>
+      <Text style={styles.editButtonText}>Edit</Text>
+    </TouchableOpacity>
+  </View>
+))}
+
+
         {/* Add New Move controls */}
         <View style={styles.newMoveContainer}>
           <Picker
@@ -315,6 +352,12 @@ const MoveScreen = () => {
               color="black"
             />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.loopButton} onPress={() => setIsLooping(!isLooping)}>
+  <Ionicons name="repeat" size={24} color={isLooping ? 'green' : 'black'} />
+  <Text style={styles.loopButtonText}>{isLooping ? 'ON' : 'OFF'}</Text>
+</TouchableOpacity>
+
+
           <TouchableOpacity style={styles.stopButton} onPress={stopTimer}>
             <Ionicons name="stop-circle-outline" size={36} color="white" />
           </TouchableOpacity>
@@ -563,6 +606,18 @@ const styles = StyleSheet.create({
     color: 'red',
     marginBottom: 20,
   },  
+  loopButton: {
+    flex: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#d3d3d3',
+  },
+  loopingMove: {
+    backgroundColor: 'yellow',
+  }  
 });
 
 export default MoveScreen;
