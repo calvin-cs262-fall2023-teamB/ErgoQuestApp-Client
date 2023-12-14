@@ -25,6 +25,9 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
   const [moves, setMoves] = useState([]); // for display ONLY (not keeping or updating values)
   const [updater, setUpdater] = useState(0); // for updating flat list on create
   const [isMenuExpanded, setIsMenuExpanded] = useState(false);
+  const [localPresets, setLocalPresets] = useState([]);
+  const [selectedPresetId, setSelectedPresetId] = useState(global.selectedPresetId);
+
   const fetchData = async () => {
     try {
       // console.log('Fetching data for user:', global.userData.id);
@@ -42,16 +45,23 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
       // console.log('Global Data: ', global.userData);
 
       // Filter motor positions by global.userData.id
-      const filteredMotorPositions = motorPositionsData.filter(position => 
-        position?.userid && 
-        Number(position.userid) === Number(global.userData.id) &&
-        position?.presetsid === global.selectedPresetId
+      const filteredMotorPositions = motorPositionsData.filter(position =>
+        Number(position.userid) === Number(global.userData.id)
       );
-    
+
+      // console.log("Filtered by UserID: ", filteredMotorPositions);
+
+      const fullyFilteredMotorPositions = filteredMotorPositions.filter(position =>
+        Number(position.presetid) === Number(global.selectedPresetId)
+      );
+
+      // console.log("Fully Filtered Motor Positions: ", fullyFilteredMotorPositions);
+
+
       // console.log('Filtered motor positions:', filteredMotorPositions);
 
       // Merge the data
-      const mergedData = filteredMotorPositions.map(motorPosition => {
+      const mergedData = fullyFilteredMotorPositions.map(motorPosition => {
         const motor = motorsData.find(m => m?.id && Number(m.id) === Number(motorPosition.motorid));
         return {
           id: motorPosition.motorid,
@@ -59,6 +69,16 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
           percent: motorPosition.angle
         };
       });
+
+      // console.log("Moves motor positions: ", mergedData);
+      // console.log("Motor Positions data: ", motorPositionsData);
+      // console.log("Filtered Motor Position data: ", filteredMotorPositions);
+      // console.log("Selected Preset ID: ", global.selectedPresetId, typeof global.selectedPresetId);
+      // console.log("User ID: ", global.userData.id, typeof global.userData.id);
+      // motorPositionsData.forEach(position => {
+      //   console.log("Motor Position PresetID: ", position.presetid, typeof position.presetid);
+      //   console.log("Motor Position UserID: ", position.userid, typeof position.userid);
+      // });
 
       global.moves = mergedData;
       setMoves(mergedData);
@@ -69,11 +89,18 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
   };
 
   useEffect(() => {
-    // Check if the user is logged in
-    if (global.userData && global.userData.id) {
-      fetchData(); // Call the fetchData function
+    setLocalPresets(global.presets);
+  }, [global.presets]);
+
+  useEffect(() => {
+    setSelectedPresetId(global.selectedPresetId);
+  }, [global.selectedPresetId]);  
+
+  useEffect(() => {
+    if(global.userData && global.userData.id) {
+      fetchData();
     }
-  }, [global.userData]);
+  }, [selectedPresetId])
 
   useEffect(() => {
     return () => {
@@ -292,7 +319,7 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
     }
   ];
 
-  const createPreset = async () => {
+  const createNewPreset = async () => {
     let largestIndex = 1;
     let newID;
 
@@ -386,9 +413,9 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
     }
   };
 
-  const motorPositionExists = async (motorPositionId, userID) => {
+  const motorPositionExists = async (motorPositionId, userID, presetID) => {
     try {
-      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}/${userID}`);
+      const response = await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorPositionId}/${userID}/${presetID}`);
       if (response.ok) {
         const motorPositionData = await response.json();
         return !!motorPositionData.id; // If motor position data with the ID exists, return true
@@ -451,13 +478,14 @@ export default function MoveScreen() { // may need ( navigation ) for commented 
         userID: global.userData.id,
         presetID: global.selectedPresetId
       };
+      console.log(motorPositionData);
 
 
       // Assuming a similar approach for motor position: check if it exists and then create or update
       // Implement motorPositionExists and updateMotorPosition logic as per your application's need
-      if (await motorPositionExists(motorId, global.userData.id)) {
+      if (await motorPositionExists(motorId, global.userData.id, global.selectedPresetId)) {
         // Update motor position
-        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorId}/${global.userData.id}`, {
+        await fetch(`https://ergoquestapp.azurewebsites.net/motorpositions/${motorId}/${global.userData.id}/${global.selectedPresetId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
